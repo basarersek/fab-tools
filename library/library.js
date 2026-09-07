@@ -31,7 +31,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const state = {
   items: new Map(),
-  filters: { text: "", types: new Set(), sellers: new Set(), tags: new Set(), status: "ok", sort: "acquired" },
+  filters: { text: "", types: new Set(), sellers: new Set(), tags: new Set(), status: "ok", hideMature: false, sort: "acquired" },
   tagSearch: "",
   shown: PAGE_STEP,
   selectedUid: null,
@@ -320,6 +320,7 @@ function matches(item) {
   const f = state.filters;
   if (f.status === "ok" && isGone(item)) return false;
   if (f.status === "gone" && !isGone(item)) return false;
+  if (f.hideMature && item.isMature) return false;
   if (f.types.size && !f.types.has(item.listingType)) return false;
   if (f.sellers.size && !f.sellers.has(item.seller)) return false;
   if (f.tags.size && ![...f.tags].every((tag) => item.tags.includes(tag))) return false;
@@ -417,6 +418,7 @@ document.querySelector(".sidebar").addEventListener("change", (event) => {
     else setByName[input.name].delete(input.value);
   }
   if (input.name === "status") state.filters.status = input.value;
+  if (input.id === "hideMature") state.filters.hideMature = input.checked;
   if (input.name === "sort") state.filters.sort = input.value;
   state.shown = PAGE_STEP;
   renderAll();

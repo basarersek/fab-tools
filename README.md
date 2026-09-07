@@ -83,7 +83,7 @@ Each field has a small arrow that restores its default.
 ### What it does
 
 - Opens a full tab with everything you own on Fab: image, title, seller, type, category, tags, formats, rating, license, acquired date.
-- Search and filter by type, seller, tag, and status. Sort by newest, title, or type.
+- Search and filter by type, seller, tag, status, and mature content. Sort by newest, title, or type.
 - Click an item for its gallery, facts, and description. Open it on Fab, recheck it, or copy its JSON.
 - Export the filtered list as one JSON file.
 - The catalog lives in your browser. Sync adds only what is new.
