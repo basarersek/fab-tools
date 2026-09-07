@@ -89,12 +89,14 @@ Each field has a small arrow that restores its default.
 
 ### Why
 
-Once you own a few hundred assets, finding one again on Fab is hard. The library page has no tag filter, no seller filter, and no way to see everything at once. A friend asked for exactly this after giving up on the Fab library. This extension keeps your own catalog in the browser, so you filter by type, seller, and tag, see the images, and export the list as JSON to use anywhere else.
+Two reasons. The first is finding things again. Once you own a few hundred assets, finding one again on Fab is hard. The library page has no tag filter, no seller filter, and no way to see everything at once. A friend asked for exactly this after giving up on the Fab library. This extension keeps your own catalog in the browser and gives the owned side the kind of filtering Fab only offers on the store side. Narrow by format, license, type, seller, tag, and date added, all at once, and read the result as a grid of images. Picking the right asset out of a thousand stops being a scrolling exercise and becomes a couple of clicks.
+
+The second reason is the JSON itself. A coding agent cannot log in to Fab and browse your library, but it can read a file. Export once and an agent can answer questions across everything you own, pick assets for a scene from your own collection instead of inventing names, or write a script that acts on the list.
 
 ### What it does
 
 - Opens a full tab with everything you own on Fab: image, title, seller, type, category, tags, formats, rating, license, acquired date.
-- Search and filter by type, seller, tag, unlisted status, and mature content. Sort by newest, title, or type.
+- Search and filter by type, format, license, seller, tag, date added, unlisted status, and mature content. Sort by newest, A to Z, or by type.
 - Click an item for its gallery, facts, and description. Open it on Fab, recheck it, or copy its JSON.
 - Export the filtered list as one JSON file.
 - The catalog lives in your browser. Sync adds only what is new.
@@ -104,6 +106,19 @@ Once you own a few hundred assets, finding one again on Fab is hard. The library
 1. Click the extension icon. The library tab opens.
 2. Press **Sync**. The first run reads your whole library and fetches details for every item. Later runs fetch only new items.
 3. Filter with the sidebar. Press **Export** to save the current list as JSON.
+
+### Filters
+
+| Filter | Meaning |
+| --- | --- |
+| Search | Matches title, seller, category, tags, and description. |
+| Types | Listing type: 3D model, material, and so on. |
+| Status | In library, unlisted, or all. Plus a mature content switch. |
+| Formats | The file formats a product ships, grouped the way Fab groups them. Picking two shows products with either one. |
+| Licenses | The license your copy carries, usually Personal or Professional. |
+| Added since | How recently the product landed in your Fab library. |
+| Sellers | Who published it. |
+| Tags | Fab's own tags. Picking two shows only products carrying both. |
 
 ### Sync
 
@@ -125,6 +140,8 @@ Once you own a few hundred assets, finding one again on Fab is hard. The library
 | Reset catalog | | Deletes the local catalog. Your Fab library is not touched. Sync again to rebuild. |
 
 ### Export format
+
+Every field is plain JSON, so an agent or a script can read it without touching Fab. Point one at the file with a question like "list every rock asset I own with a rating above four" or "group my library by seller and write a summary".
 
 ```json
 {

@@ -26,12 +26,43 @@ const typeLabels = {
   "tutorials-examples": "Tutorials",
 };
 
+// Fab's own format names and groups, keyed by the code stored on each item.
+const formatMeta = {
+  "unreal-engine": { name: "Unreal Engine", group: "Game Engine Formats" },
+  unity: { name: "Unity", group: "Game Engine Formats" },
+  uefn: { name: "UEFN", group: "Game Engine Formats" },
+  metahuman: { name: "MetaHuman", group: "Other Formats" },
+  image: { name: "Image", group: "Other Formats" },
+  "additional-files": { name: "Additional files", group: "Other Formats" },
+  "converted-files": { name: "Converted files", group: "Other Formats" },
+  "3ds-max": { name: "3ds Max", group: "3D DCC Formats" },
+  blender: { name: "Blender", group: "3D DCC Formats" },
+  "cinema-4d": { name: "Cinema 4D", group: "3D DCC Formats" },
+  maya: { name: "Maya", group: "3D DCC Formats" },
+  "z-brush": { name: "ZBrush", group: "3D DCC Formats" },
+  fbx: { name: "FBX", group: "3D Exchange Formats" },
+  glb: { name: "GLB", group: "3D Exchange Formats" },
+  gltf: { name: "GLTF", group: "3D Exchange Formats" },
+  obj: { name: "OBJ", group: "3D Exchange Formats" },
+  usd: { name: "USD", group: "3D Exchange Formats" },
+  usdz: { name: "USDZ", group: "3D Exchange Formats" },
+  "texture-set": { name: "Texture Set", group: "Material Formats" },
+};
+const formatGroupOrder = ["Game Engine Formats", "Other Formats", "3D DCC Formats", "3D Exchange Formats", "Material Formats"];
+// Unknown codes still read well: "image" becomes "Image", "sound-wave" becomes "Sound wave".
+const prettyCode = (code) => code.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+const formatName = (code) => formatMeta[code]?.name || prettyCode(code);
+const formatGroup = (code) => formatMeta[code]?.group || "Other Formats";
+
 const field = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const state = {
   items: new Map(),
-  filters: { text: "", types: new Set(), sellers: new Set(), tags: new Set(), status: "ok", hideMature: true, sort: "acquired" },
+  filters: {
+    text: "", types: new Set(), sellers: new Set(), tags: new Set(), formats: new Set(), licenses: new Set(),
+    status: "ok", hideMature: true, addedSince: "", sort: "acquired",
+  },
   tagSearch: "",
   shown: PAGE_STEP,
   selectedUid: null,
@@ -332,15 +363,33 @@ function matches(item) {
   if (f.hideMature && item.isMature) return false;
   if (f.types.size && !f.types.has(item.listingType)) return false;
   if (f.sellers.size && !f.sellers.has(item.seller)) return false;
+  if (f.licenses.size && !f.licenses.has(item.library?.license)) return false;
+  if (f.formats.size && !item.formats.some((code) => f.formats.has(code))) return false;
   if (f.tags.size && ![...f.tags].every((tag) => item.tags.includes(tag))) return false;
+  if (f.addedSince && !addedSince(item, Number(f.addedSince))) return false;
   if (!f.text) return true;
   const haystack = [item.title, item.seller, item.category?.path, item.tags.join(" "), item.description]
     .join(" ").toLowerCase();
   return f.text.split(/\s+/).every((word) => haystack.includes(word));
 }
 
+function addedSince(item, days) {
+  const when = Date.parse(item.library?.acquiredAt || "");
+  if (Number.isNaN(when)) return false;
+  return when >= Date.now() - days * 86400000;
+}
+
 const byAcquired = (a, b) => String(b.library?.acquiredAt || b.syncedAt).localeCompare(String(a.library?.acquiredAt || a.syncedAt));
-const byTitle = (a, b) => a.title.localeCompare(b.title);
+// Letters sort first, then numbers, then punctuation and symbols last.
+const titleRank = (title) => {
+  const first = (title || "").trim().charAt(0);
+  if (/\p{L}/u.test(first)) return 0;
+  if (/\p{Nd}/u.test(first)) return 1;
+  return 2;
+};
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+const byTitle = (a, b) =>
+  titleRank(a.title) - titleRank(b.title) || collator.compare(a.title || "", b.title || "");
 const byType = (a, b) => String(a.listingType).localeCompare(String(b.listingType)) || byTitle(a, b);
 const sorters = { acquired: byAcquired, title: byTitle, type: byType };
 
@@ -358,6 +407,13 @@ function countBy(items, pick) {
     }
   }
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+}
+
+function emptyNote(text) {
+  const note = document.createElement("p");
+  note.className = "facet-empty";
+  note.textContent = text;
+  return note;
 }
 
 function chip(name, value, label, count, checked, iconId) {
@@ -412,6 +468,35 @@ function renderFacets() {
     return row;
   }));
 
+  const formatBox = field("formatFacet");
+  const byGroup = new Map();
+  for (const [code, count] of countBy(items, (item) => item.formats)) {
+    const group = formatGroup(code);
+    if (!byGroup.has(group)) byGroup.set(group, []);
+    byGroup.get(group).push([code, count]);
+  }
+  const groupNames = [...byGroup.keys()].sort((a, b) => {
+    const rank = (name) => (formatGroupOrder.indexOf(name) + 1 || formatGroupOrder.length + 1);
+    return rank(a) - rank(b) || a.localeCompare(b);
+  });
+  if (!groupNames.length) formatBox.replaceChildren(emptyNote("No formats recorded. Sync to fill them in."));
+  else formatBox.replaceChildren(...groupNames.flatMap((group) => {
+    const heading = document.createElement("span");
+    heading.className = "group-name";
+    heading.textContent = group;
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    chips.append(...byGroup.get(group).map(([code, count]) =>
+      chip("formats", code, formatName(code), count, state.filters.formats.has(code), null)));
+    return [heading, chips];
+  }));
+
+  const licenseBox = field("licenseFacet");
+  const licenses = countBy(items, (item) => [item.library?.license]);
+  licenseBox.replaceChildren(...(licenses.length
+    ? licenses.map(([license, count]) => chip("licenses", license, license, count, state.filters.licenses.has(license), null))
+    : [emptyNote("Fab did not record a license for these products.")]));
+
   const needle = state.tagSearch.toLowerCase();
   const tags = countBy(items, (item) => item.tags)
     .filter(([tag]) => state.filters.tags.has(tag) || !needle || tag.toLowerCase().includes(needle))
@@ -421,12 +506,16 @@ function renderFacets() {
 
 document.querySelector(".sidebar").addEventListener("change", (event) => {
   const input = event.target;
-  const setByName = { types: state.filters.types, sellers: state.filters.sellers, tags: state.filters.tags };
+  const setByName = {
+    types: state.filters.types, sellers: state.filters.sellers, tags: state.filters.tags,
+    formats: state.filters.formats, licenses: state.filters.licenses,
+  };
   if (setByName[input.name]) {
     if (input.checked) setByName[input.name].add(input.value);
     else setByName[input.name].delete(input.value);
   }
   if (input.name === "status") state.filters.status = input.value;
+  if (input.name === "addedSince") state.filters.addedSince = input.value;
   if (input.id === "hideMature") state.filters.hideMature = input.checked;
   if (input.name === "sort") state.filters.sort = input.value;
   state.shown = PAGE_STEP;

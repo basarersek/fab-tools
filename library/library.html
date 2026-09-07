@@ -91,6 +91,39 @@
 
       <section class="facet">
         <div class="group-head">
+          <span class="label">Formats</span>
+          <span class="group-actions">
+            <button type="button" class="link" data-facet="formats" data-select="none">Clear</button>
+          </span>
+        </div>
+        <div id="formatFacet" class="groups"></div>
+      </section>
+
+      <section class="facet">
+        <div class="group-head">
+          <span class="label">Licenses</span>
+          <span class="group-actions">
+            <button type="button" class="link" data-facet="licenses" data-select="none">Clear</button>
+          </span>
+        </div>
+        <div id="licenseFacet" class="chips"></div>
+      </section>
+
+      <section class="facet">
+        <div class="group-head">
+          <span class="label tip" data-tip="When the product was added to your Fab library.">Added since</span>
+        </div>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="addedSince" value="" checked><span>Any</span></label>
+          <label class="chip"><input type="radio" name="addedSince" value="7"><span>7 days</span></label>
+          <label class="chip"><input type="radio" name="addedSince" value="30"><span>30 days</span></label>
+          <label class="chip"><input type="radio" name="addedSince" value="90"><span>90 days</span></label>
+          <label class="chip"><input type="radio" name="addedSince" value="365"><span>1 year</span></label>
+        </div>
+      </section>
+
+      <section class="facet">
+        <div class="group-head">
           <span class="label">Sellers</span>
           <span class="group-actions">
             <button type="button" class="link" data-facet="sellers" data-select="none">Clear</button>
@@ -113,9 +146,9 @@
       <section class="facet">
         <span class="label">Sort</span>
         <div class="chips">
-          <label class="chip"><input type="radio" name="sort" value="acquired" checked><span>Newest</span></label>
-          <label class="chip"><input type="radio" name="sort" value="title"><span>Title</span></label>
-          <label class="chip"><input type="radio" name="sort" value="type"><span>Type</span></label>
+          <label class="chip tip" data-tip="Most recently added to your Fab library first."><input type="radio" name="sort" value="acquired" checked><span>Newest</span></label>
+          <label class="chip tip" data-tip="Alphabetical by product name."><input type="radio" name="sort" value="title"><span>A to Z</span></label>
+          <label class="chip tip" data-tip="Grouped by listing type, then alphabetical inside each type."><input type="radio" name="sort" value="type"><span>By type</span></label>
         </div>
       </section>
     </aside>
