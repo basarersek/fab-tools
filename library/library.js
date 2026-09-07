@@ -315,6 +315,7 @@ chrome.runtime.onMessage.addListener((message) => {
 // ---------- filtering and sorting ----------
 
 const isGone = (item) => item.status && item.status !== "ok";
+const statusLabel = (item) => (item.status === "gone" ? "unlisted" : item.status);
 
 function matches(item) {
   const f = state.filters;
@@ -479,7 +480,7 @@ function card(item) {
   seller.textContent = item.seller || "";
   const pills = document.createElement("div");
   pills.className = "card-pills";
-  for (const text of [typeLabels[item.listingType] || item.listingType, isGone(item) ? item.status : null].filter(Boolean)) {
+  for (const text of [typeLabels[item.listingType] || item.listingType, isGone(item) ? statusLabel(item) : null].filter(Boolean)) {
     const pill = document.createElement("span");
     pill.className = "pill";
     pill.textContent = text;
@@ -563,7 +564,7 @@ function openDrawer(uid) {
   const acquired = item.library?.acquiredAt ? new Date(item.library.acquiredAt).toLocaleDateString() : null;
   const rating = item.rating?.count ? `${item.rating.average.toFixed(1)} from ${item.rating.count} ratings` : null;
   field("drawerFacts").replaceChildren(
-    ...fact("Status", isGone(item) ? item.status : "in library"),
+    ...fact("Status", isGone(item) ? `${statusLabel(item)}, still yours to download on Fab` : "in library"),
     ...fact("Type", typeLabels[item.listingType] || item.listingType),
     ...fact("Category", item.category?.path),
     ...fact("Seller", item.sellerUrl ? link(item.seller, item.sellerUrl) : item.seller),

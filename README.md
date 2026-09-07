@@ -83,7 +83,7 @@ Each field has a small arrow that restores its default.
 ### What it does
 
 - Opens a full tab with everything you own on Fab: image, title, seller, type, category, tags, formats, rating, license, acquired date.
-- Search and filter by type, seller, tag, status, and mature content. Sort by newest, title, or type.
+- Search and filter by type, seller, tag, unlisted status, and mature content. Sort by newest, title, or type.
 - Click an item for its gallery, facts, and description. Open it on Fab, recheck it, or copy its JSON.
 - Export the filtered list as one JSON file.
 - The catalog lives in your browser. Sync adds only what is new.
@@ -101,7 +101,7 @@ Each field has a small arrow that restores its default.
 | Sync | Walks your library list, fetches details only for items not yet in the catalog. Safe to stop and run again. |
 | Full resync | Advanced. Fetches details again for every item. Refreshes tags, images, ratings, and gone status. |
 | Recheck | In the item drawer. Asks Fab about that one item now. |
-| Gone | Fab no longer shows the listing page, but you still own it. Filter with Status, Gone. |
+| Unlisted | The seller unlisted the product. You still own it and can download it on Fab. Filter with Status, Unlisted. |
 
 ### Advanced
 
