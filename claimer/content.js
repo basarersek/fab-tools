@@ -78,6 +78,9 @@ const progress = {
   owned: 0,
   skipped: 0,
   doneEarlier: 0,
+  filtered: 0,
+  notFree: 0,
+  repeated: 0,
   failed: 0,
   log: [],
 };
@@ -263,6 +266,10 @@ async function markDone(item, done, counter) {
 // Returns "stop", "recollect" when the search settings changed, or nothing to go on.
 async function claimAll(items, headers) {
   const done = await loadDone();
+  const batchStart = {
+    added: progress.added, owned: progress.owned,
+    doneEarlier: progress.doneEarlier, filtered: progress.filtered,
+  };
 
   for (let start = 0; start < items.length; start += currentFilters.parallelChecks) {
     await waitWhilePaused();
@@ -279,7 +286,8 @@ async function claimAll(items, headers) {
       }
       progress.skipped++;
       if (reason === "done earlier") progress.doneEarlier++;
-      if (reason === "not free") await log(`${item.title}: not free or no offer, skipped`);
+      if (reason === "filtered") progress.filtered++;
+      if (reason === "not free") progress.notFree++;
     }
 
     let ownedFlags;
@@ -317,12 +325,19 @@ async function claimAll(items, headers) {
     progress.index += Math.min(currentFilters.parallelChecks, items.length - start);
     await saveProgress();
   }
+
+  const added = progress.added - batchStart.added;
+  const owned = progress.owned - batchStart.owned;
+  const seen = progress.doneEarlier - batchStart.doneEarlier;
+  const cut = progress.filtered - batchStart.filtered;
+  await log(`Batch done: ${added} added, ${owned} already owned, ${seen} claimed earlier, ${cut} cut by your filters`);
 }
 
 // Collects a batch of pages, claims it, then goes on with the next batch.
 async function claimInBatches(headers) {
   let baseUrl = buildSearchUrl(currentFilters);
   await log(`Search: ${baseUrl}`);
+  const seenUids = new Set();
   let offset = 0;
   while (progress.moreToFind && !stopRequested) {
     recollectRequested = false;
@@ -333,13 +348,25 @@ async function claimInBatches(headers) {
     progress.moreToFind = !batch.lastPageSeen;
     await log(`Batch of ${batch.items.length} listings found, ${progress.found} so far`);
 
-    const outcome = await claimAll(batch.items, headers);
+    const fresh = batch.items.filter((item) => !seenUids.has(item.uid));
+    progress.repeated += batch.items.length - fresh.length;
+    for (const item of fresh) seenUids.add(item.uid);
+
+    // Fab stops honouring the offset past a depth and repeats its last page forever.
+    if (batch.items.length && !fresh.length) {
+      progress.moreToFind = false;
+      await log(`Fab stopped returning new listings at ${progress.found}. Reached the end of what its search will page through.`);
+      break;
+    }
+
+    const outcome = await claimAll(fresh, headers);
     if (outcome === "stop") return;
     if (outcome !== "recollect") continue;
 
     baseUrl = buildSearchUrl(currentFilters);
     await log(`Search changed: ${baseUrl}`);
     offset = 0;
+    seenUids.clear();
     Object.assign(progress, { found: 0, index: 0, moreToFind: true });
   }
 }
@@ -351,7 +378,7 @@ async function runClaim(filters) {
   currentFilters = filters;
   Object.assign(progress, {
     running: true, phase: "collecting", found: 0, index: 0, moreToFind: true,
-    added: 0, owned: 0, skipped: 0, doneEarlier: 0, failed: 0, log: [],
+    added: 0, owned: 0, skipped: 0, doneEarlier: 0, filtered: 0, notFree: 0, repeated: 0, failed: 0, log: [],
   });
 
   try {
@@ -364,6 +391,7 @@ async function runClaim(filters) {
 
   progress.running = false;
   progress.phase = stopRequested ? "stopped" : "finished";
-  await log(`${progress.phase}: added ${progress.added}, already owned ${progress.owned}, skipped ${progress.skipped} (${progress.doneEarlier} done in earlier runs), failed ${progress.failed}`);
+  await log(`${progress.phase}: ${progress.added} added, ${progress.owned} already owned, ${progress.failed} failed.`);
+  await log(`Skipped ${progress.skipped}: ${progress.filtered} cut by your filters, ${progress.doneEarlier} claimed in an earlier run, ${progress.notFree} not free, ${progress.repeated} sent twice by Fab.`);
   running = false;
 }

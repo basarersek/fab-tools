@@ -1,33 +1,4 @@
-# Third party notices
-
-## Lucide icons
-
-The icons inside `claimer/popup.html` and `library/library.html` come from [Lucide](https://lucide.dev).
-
-ISC License
-
-Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2022.
-
-Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-## Simple Icons
-
-The brand marks for Unreal Engine, Unity, Fortnite, Blender, Maya, 3ds Max and Cinema 4D in `library/library.html` come from [Simple Icons](https://simpleicons.org), released under CC0 1.0 Universal.
-
-Each brand name and logo is a trademark of its owner. They appear here only to identify the file format a product ships in, the same way Fab labels its own format filters. This project is not endorsed by or affiliated with any of those companies.
-
-## JetBrains Mono font
-
-The log panels use JetBrains Mono, in `claimer/fonts` and `library/fonts`, packaged by [Fontsource](https://fontsource.org). Licensed under the SIL Open Font License, Version 1.1, the same terms as Roboto below. The full text ships as `fonts/LICENSE-jetbrains-mono.txt`.
-
-## Roboto font
-
-The files in `claimer/fonts` and `library/fonts` are the Roboto typeface, packaged by [Fontsource](https://fontsource.org). Licensed under the SIL Open Font License, Version 1.1. The full text is below and in each `fonts/LICENSE.txt`.
-
-```
-Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic) Roboto-Italic[wdth,wght].ttf: Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
+Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono) JetBrainsMono-Italic[wght].ttf: Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -120,8 +91,3 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
-```
-
-## Design tokens
-
-The color and spacing tokens in `claimer/popup.css` and `library/library.css` follow the [shadcn/ui](https://ui.shadcn.com) neutral theme, MIT License, Copyright (c) 2023 shadcn.

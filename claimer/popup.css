@@ -1,4 +1,6 @@
 /* Roboto, vendored from @fontsource/roboto (Apache 2.0). */
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/roboto-latin-400-normal.woff2") format("woff2"); }
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/roboto-latin-500-normal.woff2") format("woff2"); }
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/roboto-latin-700-normal.woff2") format("woff2"); }
@@ -14,10 +16,11 @@
   --muted-foreground: hsl(0 0% 63.9%);
   --accent: hsl(0 0% 14.9%);
   --border: hsl(0 0% 14.9%);
-  --input: hsl(0 0% 14.9%);
+  --input: hsl(0 0% 38%);
+  --control-border: hsl(0 0% 38%);
   --ring: hsl(0 0% 83.1%);
   --green: hsl(142 71% 45%);
-  --green-strong: hsl(142 76% 36%);
+  --green-strong: hsl(142 76% 30%);
   --red: hsl(0 84% 60%);
   --red-strong: hsl(0 72% 51%);
   --amber: hsl(43 96% 56%);
@@ -197,7 +200,7 @@ body[data-phase="collecting"] .phase-icon, body[data-phase="claiming"] .phase-ic
   padding: 0 var(--s3) 0 10px;
   font-size: 13px;
   color: var(--foreground);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 9999px;
   cursor: pointer;
   user-select: none;
@@ -288,7 +291,7 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
   margin: 0;
   padding: var(--s2) var(--s3);
   overflow: auto;
-  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-family: "JetBrains Mono", Consolas, ui-monospace, monospace;
   font-size: 12px;
   line-height: 1.5;
   color: var(--foreground);
@@ -303,3 +306,5 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+.label small { font-weight: 400; opacity: 0.6; }

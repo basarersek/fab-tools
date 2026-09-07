@@ -8,8 +8,9 @@ const PAGE_STEP = 300;
 const MAX_LOG_LINES = 300;
 const MAX_TAGS_SHOWN = 60;
 const MAX_SELLERS_SHOWN = 40;
+const MAX_ANIMATED_CARDS = 48;
 
-const defaults = { detailsAtOnce: 4, waitMs: 300 };
+const defaults = { detailsAtOnce: 4, waitMs: 300, perPage: 300, cardSize: 210 };
 const typeLabels = {
   "3d-model": "3D model",
   material: "Material",
@@ -47,11 +48,27 @@ const formatMeta = {
   usd: { name: "USD", group: "3D Exchange Formats" },
   usdz: { name: "USDZ", group: "3D Exchange Formats" },
   "texture-set": { name: "Texture Set", group: "Material Formats" },
+  animationblueprint: { name: "Animation Blueprint", group: "Game Engine Formats" },
+  "animation-blueprint": { name: "Animation Blueprint", group: "Game Engine Formats" },
+};
+const groupIcons = {
+  "Game Engine Formats": "g-game-engine",
+  "Other Formats": "g-other",
+  "3D DCC Formats": "g-dcc",
+  "3D Exchange Formats": "g-exchange",
+  "Material Formats": "g-material",
 };
 const formatGroupOrder = ["Game Engine Formats", "Other Formats", "3D DCC Formats", "3D Exchange Formats", "Material Formats"];
-// Unknown codes still read well: "image" becomes "Image", "sound-wave" becomes "Sound wave".
-const prettyCode = (code) => code.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+// Unknown codes still read well. Hyphens and camel case both become spaces.
+const prettyCode = (code) =>
+  code.replace(/[-_]/g, " ").replace(/([a-z0-9])([A-Z])/g, "$1 $2").trim().replace(/^./, (c) => c.toUpperCase());
 const formatName = (code) => formatMeta[code]?.name || prettyCode(code);
+const formatIcon = (code) => (formatMeta[code] ? `f-${code}` : "f-formats");
+const knownLicenseIcons = new Set(["personal", "professional"]);
+const licenseIcon = (license) => {
+  const slug = String(license).toLowerCase();
+  return knownLicenseIcons.has(slug) ? `f-${slug}` : "f-licenses";
+};
 const formatGroup = (code) => formatMeta[code]?.group || "Other Formats";
 
 const field = (id) => document.getElementById(id);
@@ -107,6 +124,8 @@ function readSettings() {
   return {
     detailsAtOnce: clamp("detailsAtOnce", 1, 8, defaults.detailsAtOnce),
     waitMs: clamp("waitMs", 0, 10000, defaults.waitMs),
+    perPage: Math.max(0, Math.round(Number(field("perPage").value)) || 0),
+    cardSize: clamp("cardSize", 140, 420, defaults.cardSize),
     includeRaw: field("includeRaw").checked,
   };
 }
@@ -115,6 +134,10 @@ async function restoreSettings() {
   const stored = (await chrome.storage.local.get(SETTINGS_KEY))[SETTINGS_KEY] || {};
   field("detailsAtOnce").value = stored.detailsAtOnce ?? defaults.detailsAtOnce;
   field("waitMs").value = stored.waitMs ?? defaults.waitMs;
+  field("perPage").value = stored.perPage ?? defaults.perPage;
+  field("cardSize").value = stored.cardSize ?? defaults.cardSize;
+  applyCardSize();
+  state.shown = pageSize();
   field("includeRaw").checked = Boolean(stored.includeRaw);
 }
 
@@ -134,15 +157,36 @@ for (const button of document.querySelectorAll(".reset-field")) {
 }
 for (const id of ["detailsAtOnce", "waitMs", "includeRaw"]) field(id).addEventListener("change", saveSettings);
 
+// Zero means show everything, so a big catalog is one long scroll.
+function pageSize() {
+  const value = Math.max(0, Math.round(Number(field("perPage").value)));
+  return value > 0 ? value : Infinity;
+}
+
+function applyCardSize() {
+  document.documentElement.style.setProperty("--card", `${field("cardSize").value}px`);
+}
+
+field("cardSize").addEventListener("input", applyCardSize);
+field("cardSize").addEventListener("change", saveSettings);
+
+field("perPage").addEventListener("change", () => {
+  state.shown = pageSize();
+  saveSettings();
+  renderGrid();
+});
+
 // ---------- resizable side panels ----------
 
 function makeResizable(handle) {
   const panel = field(handle.dataset.target);
   const key = `fabLibraryWidth.${handle.dataset.target}`;
   const grows = handle.dataset.side === "right" ? 1 : -1;
+  const isSidebar = handle.dataset.target === "sidebar";
+  const limits = isSidebar ? { min: 180, share: 0.4 } : { min: 300, share: 0.6 };
   const apply = (width) => {
-    const clamped = Math.min(window.innerWidth * 0.8, Math.max(160, width));
-    if (handle.dataset.target === "sidebar") document.documentElement.style.setProperty("--sidebar", `${clamped}px`);
+    const clamped = Math.min(window.innerWidth * limits.share, Math.max(limits.min, width));
+    if (isSidebar) document.documentElement.style.setProperty("--sidebar", `${clamped}px`);
     else panel.style.width = `${clamped}px`;
     return clamped;
   };
@@ -207,8 +251,11 @@ document.addEventListener("mouseout", (event) => {
 
 const iconByPhase = { syncing: "busy", rechecking: "busy" };
 
+const syncingPhases = new Set(["collecting", "syncing", "paused"]);
+
 function setPhase(phase) {
   state.phase = phase;
+  field("progressBar").hidden = !syncingPhases.has(phase);
   const label = phase[0].toUpperCase() + phase.slice(1);
   field("phase").dataset.tip = label;
   field("phase").setAttribute("aria-label", label);
@@ -240,11 +287,14 @@ field("logToggle").addEventListener("click", () => {
   field("logToggle").setAttribute("aria-pressed", String(open));
 });
 
+// The item count already sits above the grid, so this line only carries the sync time.
 async function showIdleStatus() {
   const meta = (await chrome.storage.local.get(META_KEY))[META_KEY];
-  const when = meta?.lastSync ? `, last sync ${new Date(meta.lastSync).toLocaleString()}` : "";
-  const count = state.items.size;
-  setStatus(count ? `${count} items in catalog${when}` : "No items yet. Log in to fab.com, then press Sync.");
+  if (!state.items.size) {
+    setStatus("No items yet. Log in to fab.com, then press Sync.");
+    return;
+  }
+  setStatus(meta?.lastSync ? `Last sync ${new Date(meta.lastSync).toLocaleString()}` : "");
 }
 
 // ---------- fab.com tab ----------
@@ -342,7 +392,7 @@ chrome.runtime.onMessage.addListener((message) => {
     setPhase(p.phase);
     chrome.storage.local.set({ [META_KEY]: { lastSync: new Date().toISOString() } });
     addLog(`${p.phase}: ${p.updated} updated, ${p.gone} gone, ${p.failed} failed`);
-    setStatus(`${p.phase}: ${p.updated} updated, ${p.gone} gone, ${p.failed} failed. ${state.items.size} items in catalog.`, 100);
+    setStatus(`${p.phase}: ${p.updated} updated, ${p.gone} gone, ${p.failed} failed.`, 100);
     renderAll();
   }
 });
@@ -434,6 +484,7 @@ function chip(name, value, label, count, checked, iconId) {
   }
   const text = document.createElement("span");
   text.textContent = label;
+  wrapper.title = label;
   wrapper.append(text);
   if (count !== null) {
     const small = document.createElement("small");
@@ -441,6 +492,36 @@ function chip(name, value, label, count, checked, iconId) {
     wrapper.append(small);
   }
   return wrapper;
+}
+
+// Fab dates can be missing or old, so an empty range is shown and cannot be picked.
+function paintAddedCounts(items) {
+  const stamps = items
+    .map((item) => Date.parse(item.library?.acquiredAt || ""))
+    .filter((when) => !Number.isNaN(when));
+
+  for (const small of document.querySelectorAll("[data-added-count]")) {
+    const days = Number(small.dataset.addedCount);
+    const count = days ? items.filter((item) => addedSince(item, days)).length : items.length;
+    small.textContent = count;
+    const label = small.closest(".chip");
+    const input = label?.querySelector("input");
+    if (!label || !input) continue;
+    const blocked = days > 0 && count === 0;
+    label.classList.toggle("chip-disabled", blocked);
+    input.disabled = blocked;
+  }
+
+  const note = field("addedNote");
+  if (!stamps.length) {
+    note.textContent = "Fab did not record when these products were added, so this filter finds nothing.";
+    note.hidden = false;
+    return;
+  }
+  const oldest = new Date(Math.min(...stamps)).toLocaleDateString();
+  const newest = new Date(Math.max(...stamps)).toLocaleDateString();
+  note.textContent = `Recorded dates run from ${oldest} to ${newest}.`;
+  note.hidden = false;
 }
 
 function renderFacets() {
@@ -480,21 +561,28 @@ function renderFacets() {
     return rank(a) - rank(b) || a.localeCompare(b);
   });
   if (!groupNames.length) formatBox.replaceChildren(emptyNote("No formats recorded. Sync to fill them in."));
-  else formatBox.replaceChildren(...groupNames.flatMap((group) => {
+  else formatBox.replaceChildren(...groupNames.map((group) => {
     const heading = document.createElement("span");
     heading.className = "group-name";
-    heading.textContent = group;
+    const headingIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const headingUse = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    headingUse.setAttribute("href", `#${groupIcons[group] || "g-other"}`);
+    headingIcon.append(headingUse);
+    heading.append(headingIcon, document.createTextNode(group));
     const chips = document.createElement("div");
     chips.className = "chips";
     chips.append(...byGroup.get(group).map(([code, count]) =>
-      chip("formats", code, formatName(code), count, state.filters.formats.has(code), null)));
-    return [heading, chips];
+      chip("formats", code, formatName(code), count, state.filters.formats.has(code), formatIcon(code))));
+    const wrapper = document.createElement("div");
+    wrapper.className = "format-group";
+    wrapper.append(heading, chips);
+    return wrapper;
   }));
 
   const licenseBox = field("licenseFacet");
   const licenses = countBy(items, (item) => [item.library?.license]);
   licenseBox.replaceChildren(...(licenses.length
-    ? licenses.map(([license, count]) => chip("licenses", license, license, count, state.filters.licenses.has(license), null))
+    ? licenses.map(([license, count]) => chip("licenses", license, license, count, state.filters.licenses.has(license), licenseIcon(license)))
     : [emptyNote("Fab did not record a license for these products.")]));
 
   const needle = state.tagSearch.toLowerCase();
@@ -502,6 +590,13 @@ function renderFacets() {
     .filter(([tag]) => state.filters.tags.has(tag) || !needle || tag.toLowerCase().includes(needle))
     .slice(0, MAX_TAGS_SHOWN);
   field("tagFacet").replaceChildren(...tags.map(([tag, count]) => chip("tags", tag, tag, count, state.filters.tags.has(tag), null)));
+
+  // Runs last and alone, so a bad date can never stop the panels above from drawing.
+  try {
+    paintAddedCounts(items);
+  } catch (error) {
+    addLog(`Date filter counts failed: ${error.message}`);
+  }
 }
 
 document.querySelector(".sidebar").addEventListener("change", (event) => {
@@ -518,11 +613,11 @@ document.querySelector(".sidebar").addEventListener("change", (event) => {
   if (input.name === "addedSince") state.filters.addedSince = input.value;
   if (input.id === "hideMature") state.filters.hideMature = input.checked;
   if (input.name === "sort") state.filters.sort = input.value;
-  state.shown = PAGE_STEP;
+  state.shown = pageSize();
   renderAll();
 });
 
-for (const button of document.querySelectorAll(".link[data-facet]")) {
+for (const button of document.querySelectorAll("[data-facet]")) {
   button.addEventListener("click", () => {
     state.filters[button.dataset.facet].clear();
     renderAll();
@@ -539,25 +634,49 @@ field("search").addEventListener("input", () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     state.filters.text = field("search").value.trim().toLowerCase();
-    state.shown = PAGE_STEP;
+    state.shown = pageSize();
     renderGrid();
   }, 200);
 });
 
 // ---------- grid ----------
 
-function card(item) {
+function ratingBadge(rating) {
+  const wrapper = document.createElement("span");
+  wrapper.className = "card-rating tip";
+  wrapper.dataset.tip = `${rating.average.toFixed(2)} out of 5 from ${rating.count} ratings on Fab`;
+  const stars = document.createElement("span");
+  stars.className = "stars-static";
+  const filled = Math.round(rating.average);
+  for (let i = 1; i <= 5; i++) {
+    const star = document.createElement("span");
+    star.className = i <= filled ? "star-glyph on" : "star-glyph";
+    star.textContent = "★";
+    stars.append(star);
+  }
+  const count = document.createElement("small");
+  count.textContent = rating.count;
+  wrapper.append(stars, count);
+  return wrapper;
+}
+
+function card(item, index) {
   const article = document.createElement("article");
   article.className = "card" + (isGone(item) ? " gone" : "") + (item.uid === state.selectedUid ? " selected" : "");
   article.dataset.uid = item.uid;
+  if (index < MAX_ANIMATED_CARDS) {
+    article.classList.add("card-enter");
+    article.style.setProperty("--enter-delay", `${index * 14}ms`);
+  }
 
   const thumb = document.createElement("div");
   thumb.className = "thumb";
   if (item.thumbnail) {
     const img = document.createElement("img");
     img.loading = "lazy";
-    img.src = item.thumbnail;
+    img.decoding = "async";
     img.alt = "";
+    img.src = item.thumbnail;
     thumb.append(img);
   } else {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -571,7 +690,9 @@ function card(item) {
   body.className = "card-body";
   const title = document.createElement("div");
   title.className = "card-title";
-  title.textContent = item.title;
+  const titleText = document.createElement("span");
+  titleText.textContent = item.title;
+  title.append(titleText);
   const seller = document.createElement("div");
   seller.className = "card-seller";
   seller.textContent = item.seller || "";
@@ -588,7 +709,10 @@ function card(item) {
     statusPill.dataset.tip = statusTip[item.status] || item.status;
     pills.append(statusPill);
   }
-  body.append(title, seller, pills);
+
+  body.append(title, seller);
+  if (item.rating?.count) body.append(ratingBadge(item.rating));
+  body.append(pills);
   article.append(thumb, body);
   return article;
 }
@@ -596,20 +720,33 @@ function card(item) {
 function renderGrid() {
   const items = filteredItems();
   const total = state.items.size;
-  field("count").textContent = items.length === total ? `${total} items` : `${items.length} of ${total} items`;
-  field("grid").replaceChildren(...items.slice(0, state.shown).map(card));
+  const drawn = Math.min(state.shown, items.length);
+  if (drawn < items.length) field("count").textContent = `${drawn}/${items.length} items shown`;
+  else if (items.length < total) field("count").textContent = `${items.length} of ${total} items`;
+  else field("count").textContent = `${total} items`;
+  field("grid").replaceChildren(...items.slice(0, state.shown).map((item, index) => card(item, index)));
   field("more").hidden = items.length <= state.shown;
   field("export").disabled = items.length === 0;
   field("exportLabel").textContent = items.length ? `Export ${items.length}` : "Export";
 }
 
 function renderAll() {
-  renderFacets();
-  renderGrid();
+  try {
+    renderFacets();
+  } catch (error) {
+    addLog(`Filter panel failed to draw: ${error.message}`);
+    setStatus(`Filter panel failed to draw: ${error.message}`);
+  }
+  try {
+    renderGrid();
+  } catch (error) {
+    addLog(`Grid failed to draw: ${error.message}`);
+    setStatus(`Grid failed to draw: ${error.message}`);
+  }
 }
 
 field("more").addEventListener("click", () => {
-  state.shown += PAGE_STEP;
+  state.shown += pageSize();
   renderGrid();
 });
 

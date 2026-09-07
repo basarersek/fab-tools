@@ -1,4 +1,6 @@
 /* Roboto, vendored from @fontsource/roboto (Apache 2.0). */
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 400; font-display: swap; src: url("fonts/roboto-latin-400-normal.woff2") format("woff2"); }
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 500; font-display: swap; src: url("fonts/roboto-latin-500-normal.woff2") format("woff2"); }
 @font-face { font-family: "Roboto"; font-style: normal; font-weight: 700; font-display: swap; src: url("fonts/roboto-latin-700-normal.woff2") format("woff2"); }
@@ -14,10 +16,11 @@
   --muted-foreground: hsl(0 0% 63.9%);
   --accent: hsl(0 0% 14.9%);
   --border: hsl(0 0% 14.9%);
-  --input: hsl(0 0% 14.9%);
+  --input: hsl(0 0% 38%);
+  --control-border: hsl(0 0% 38%);
   --ring: hsl(0 0% 83.1%);
   --green: hsl(142 71% 45%);
-  --green-strong: hsl(142 76% 36%);
+  --green-strong: hsl(142 76% 30%);
   --red: hsl(0 84% 60%);
   --red-strong: hsl(0 72% 51%);
   --amber: hsl(43 96% 56%);
@@ -28,9 +31,11 @@
   --s3: 13px;
   --s4: 21px;
   --s5: 34px;
-  --sidebar: 233px;
+  color-scheme: dark;
+  --sidebar: 392px;
   --drawer: 377px;
   --column: 987px;
+  --card: 210px;
 }
 
 * { box-sizing: border-box; }
@@ -125,6 +130,7 @@ body[data-phase="syncing"] .phase-icon, body[data-phase="rechecking"] .phase-ico
   padding: 0;
 }
 .progress { width: 100%; height: var(--s1); overflow: hidden; border-radius: 9999px; background: var(--muted); }
+.progress[hidden] { display: none; }
 .progress-indicator { height: 100%; width: 0; background: var(--blue); transition: width 0.3s ease, background 0.3s; }
 body[data-phase="paused"] .progress-indicator { background: var(--amber); }
 body[data-phase="finished"] .progress-indicator { background: var(--green); }
@@ -137,7 +143,7 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
   margin: 0 auto var(--s3);
   padding: var(--s2) var(--s3);
   overflow: auto;
-  font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-family: "JetBrains Mono", Consolas, ui-monospace, monospace;
   font-size: 12px;
   line-height: 1.5;
   color: var(--foreground);
@@ -151,20 +157,58 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 /* ---------- layout ---------- */
 
 .layout { display: flex; flex: 1; min-height: 0; }
+/* The wrapper never scrolls, so the drag handle stays where the pointer expects it. */
 .sidebar {
   position: relative;
+  display: flex;
   flex: 0 0 var(--sidebar);
-  min-width: 160px;
-  overflow: auto;
-  padding: var(--s3) var(--s4);
+  min-width: 180px;
+  overflow: hidden;
   border-right: 1px solid var(--border);
+}
+.sidebar-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--s3) var(--s4);
 }
 .facet { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--border); }
 .facet:first-child { border-top: 0; padding-top: 0; }
 .main { flex: 1; min-width: 0; overflow: auto; padding: var(--s3) var(--s4) var(--s5); }
-.count { margin: 0 0 var(--s3); font-size: 13px; }
+.grid-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s3); margin-bottom: var(--s3); }
+.grid-tools { display: flex; align-items: center; gap: var(--s4); }
+.tool { display: flex; align-items: center; gap: var(--s2); }
+.tool-label { font-size: 12px; color: var(--foreground); white-space: nowrap; }
+/* Small by default, and grows with the number when the browser can size to content. */
+.input-narrow { width: 68px; padding: 0 var(--s2); text-align: center; }
+@supports (field-sizing: content) {
+  .input-narrow { width: auto; min-width: 52px; max-width: 120px; field-sizing: content; }
+}
 
-.label { display: block; font-size: 13px; font-weight: 500; }
+.count { margin: 0; font-size: 13px; }
+
+.size { display: flex; align-items: center; gap: var(--s2); }
+.size svg { width: 15px; height: 15px; }
+.size input[type="range"] {
+  appearance: none;
+  width: 144px;
+  height: 4px;
+  background: var(--muted);
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.size input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--foreground);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
+.label svg { width: 14px; height: 14px; flex-shrink: 0; }
 .group-head { display: flex; align-items: center; justify-content: space-between; }
 .group-actions { display: flex; gap: var(--s2); }
 .link { padding: 0; font: inherit; font-size: 12px; color: var(--foreground); background: none; border: 0; cursor: pointer; outline: none; }
@@ -241,16 +285,19 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 
 /* ---------- chips ---------- */
 
-.chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+/* Two even columns, so every group reads as a tidy list. */
+.chips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 29px;
-  padding: 0 var(--s3) 0 10px;
+  min-height: 29px;
+  padding: 4px var(--s3) 4px 10px;
   font-size: 13px;
+  line-height: 1.3;
+  text-align: left;
   color: var(--foreground);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 9999px;
   cursor: pointer;
   user-select: none;
@@ -259,24 +306,50 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 }
 .chip input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .chip svg { width: 15px; height: 15px; flex-shrink: 0; }
-.chip small { font-size: 11px; opacity: 0.7; }
+.chip span { min-width: 0; }
+.chip small { margin-left: auto; font-size: 11px; opacity: 0.7; }
 .chip:hover { border-color: var(--muted-foreground); }
 .chip:has(input:checked) { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
 .chip:has(input:focus-visible) { box-shadow: 0 0 0 1px var(--background), 0 0 0 3px var(--ring); }
 .chip.static { cursor: default; }
+.chip-disabled { opacity: 0.35; pointer-events: none; }
 
 /* ---------- seller list ---------- */
 
 .facet-empty { margin: 0; font-size: 12px; color: var(--muted-foreground); }
 .groups { display: flex; flex-direction: column; gap: var(--s3); }
+.format-group { display: flex; flex-direction: column; gap: var(--s1); }
 .group-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: var(--foreground);
 }
-.group-name + .chips { margin-top: var(--s1); }
+
+.group-name svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+.icon-clear {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--foreground);
+  background: none;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+  outline: none;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+.icon-clear svg { width: 15px; height: 15px; }
+.icon-clear:hover, .icon-clear:focus-visible { opacity: 1; background: var(--accent); }
+.groups .chips { gap: var(--s1); }
 
 .list { display: flex; flex-direction: column; gap: var(--s1); }
 .row { display: flex; align-items: center; gap: var(--s2); font-size: 13px; cursor: pointer; }
@@ -339,12 +412,14 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 
 /* ---------- grid ---------- */
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--s3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card), 1fr)); gap: var(--s3); }
 .card {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 260px;
+  border: 1px solid var(--control-border);
   border-radius: calc(var(--radius) + 2px);
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s;
@@ -353,12 +428,22 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 .card.selected { border-color: var(--primary); }
 .card.gone { opacity: 0.55; }
 .thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; background: var(--muted); }
-.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; animation: fade-in 0.3s ease both; }
 .thumb svg { width: 21px; height: 21px; stroke: var(--muted-foreground); }
 .card-body { display: flex; flex: 1; flex-direction: column; padding: var(--s2) var(--s3) var(--s3); }
-.card-title { min-height: 2.6em; font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.card-seller { margin-top: var(--s1); font-size: 12px; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.card-pills { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: auto; padding-top: var(--s2); }
+/* Always two lines tall, so the seller sits at the same height on every card.
+   The text centres inside that box while staying left aligned. */
+.card-title { display: flex; align-items: center; min-height: 2.6em; font-size: 13px; font-weight: 500; line-height: 1.3; }
+.card-title span { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.card-seller { margin-top: 2px; font-size: 12px; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card-pills { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); margin-top: auto; padding-top: var(--s2); }
+.card-rating { display: flex; align-items: center; gap: var(--s2); margin-top: auto; padding-top: var(--s2); }
+/* The rating takes the flexible space, so the gap below it never varies. */
+.card-rating + .card-pills { margin-top: 0; padding-top: var(--s2); }
+.stars-static { display: flex; gap: 1px; }
+.star-glyph { font-size: 16px; line-height: 1; color: var(--muted); }
+.star-glyph.on { color: var(--amber); }
+.card-rating small { font-size: 12px; color: var(--foreground); opacity: 0.75; }
 .pill {
   display: inline-flex;
   align-items: center;
@@ -389,6 +474,7 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
   box-shadow: -8px 0 34px rgb(0 0 0 / 0.5);
 }
 .drawer[hidden] { display: none; }
+.drawer { animation: drawer-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .drawer-head { display: flex; align-items: flex-start; gap: var(--s2); padding: var(--s3) var(--s3) var(--s3) var(--s4); border-bottom: 1px solid var(--border); }
 .drawer-title { flex: 1; margin: 0; font-size: 16px; font-weight: 500; line-height: 1.3; }
 .drawer-body { flex: 1; overflow: auto; padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
@@ -411,14 +497,25 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
   position: absolute;
   top: 0;
   bottom: 0;
-  z-index: 2;
-  width: 7px;
+  z-index: 4;
+  width: 11px;
   cursor: col-resize;
-  transition: background 0.15s;
 }
-.sidebar .resizer { right: 0; }
-.drawer .resizer { left: 0; }
-.resizer:hover, .resizer.active { background: var(--ring); opacity: 0.4; }
+.sidebar .resizer { right: -5px; }
+.drawer .resizer { left: -5px; }
+/* A thin line that thickens on hover, so the handle is easy to find and grab. */
+.resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--border);
+  transform: translateX(-50%);
+  transition: width 0.15s, background 0.15s;
+}
+.resizer:hover::after, .resizer.active::after { width: 3px; background: var(--foreground); }
 
 /* ---------- tooltip ---------- */
 
@@ -437,6 +534,53 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.4);
   pointer-events: none;
 }
+
+/* Dark track, light thumb, wide enough to grab. */
+.main::-webkit-scrollbar,
+.sidebar-scroll::-webkit-scrollbar,
+.drawer-body::-webkit-scrollbar,
+.log::-webkit-scrollbar {
+  width: 14px;
+}
+.main::-webkit-scrollbar-track,
+.sidebar-scroll::-webkit-scrollbar-track,
+.drawer-body::-webkit-scrollbar-track,
+.log::-webkit-scrollbar-track {
+  background: var(--background);
+}
+.main::-webkit-scrollbar-thumb,
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.drawer-body::-webkit-scrollbar-thumb,
+.log::-webkit-scrollbar-thumb {
+  background: var(--foreground);
+  background-clip: padding-box;
+  border: 4px solid var(--background);
+  border-radius: 9999px;
+}
+.log::-webkit-scrollbar-track { background: var(--muted); }
+.log::-webkit-scrollbar-thumb { border-color: var(--muted); }
+
+/* Only opacity and transform animate, so the compositor does the work. */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes drawer-in {
+  from { opacity: 0; transform: translate3d(16px, 0, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes panel-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Set on the first cards only, so a thousand of them never animate at once. */
+.card-enter { animation: card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--enter-delay, 0ms); }
+.facet { animation: panel-in 0.2s ease both; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
