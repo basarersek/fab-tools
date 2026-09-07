@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fab Free Claimer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Adds free Fab listings to your library, with filters. Unofficial, not affiliated with Epic Games.",
   "permissions": ["storage", "scripting"],
   "host_permissions": ["https://www.fab.com/*"],

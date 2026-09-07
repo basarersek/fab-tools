@@ -8,11 +8,13 @@
 
 ## Install
 
-1. Download this repo, or clone it.
+1. Get the extensions from the [latest release](https://github.com/basarersek/fab-tools/releases/latest): one zip per extension. Unzip each into a folder you keep. Or clone this repo and use the `claimer` and `library` folders.
 2. Open `chrome://extensions` or `edge://extensions`.
 3. Turn on **Developer mode** at the top right.
-4. Click **Load unpacked** and pick the `claimer` folder, or the `library` folder, or both.
+4. Click **Load unpacked** and pick the unzipped folder. Repeat for the second extension.
 5. Log in to [fab.com](https://www.fab.com) in the same browser.
+
+Chrome only installs packed extensions from its Web Store, so these come as zip files. To update, unzip the new release over the old folder and press the reload icon on the extensions page.
 
 Both extensions run a small script inside your fab.com tab. They call the same endpoints the Fab site uses, with your own login session. Nothing is downloaded. No data leaves your browser.
 
