@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Fab Free Claimer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body data-phase="idle">
+  <svg xmlns="http://www.w3.org/2000/svg" class="sprite" aria-hidden="true">
+    <symbol id="i-3d-model" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></symbol>
+    <symbol id="i-material" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" /><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" /><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" /></symbol>
+    <symbol id="i-hdri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="m17.66 17.66 1.41 1.41" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="m6.34 17.66-1.41 1.41" /><path d="m19.07 4.93-1.41 1.41" /></symbol>
+    <symbol id="i-decal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 9a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 15 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z" /><path d="M15 3v5a1 1 0 0 0 1 1h5" /><path d="M8 13h.01" /><path d="M16 13h.01" /><path d="M10 16s.8 1 2 1c1.3 0 2-1 2-1" /></symbol>
+    <symbol id="i-brush" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913" /><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z" /><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15" /></symbol>
+    <symbol id="i-animation" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M7 3v18" /><path d="M3 7.5h4" /><path d="M3 12h18" /><path d="M3 16.5h4" /><path d="M17 3v18" /><path d="M17 7.5h4" /><path d="M17 16.5h4" /></symbol>
+    <symbol id="i-vfx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" /><path d="M20 2v4" /><path d="M22 4h-4" /><circle cx="4" cy="20" r="2" /></symbol>
+    <symbol id="i-audio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" /><path d="M16 9a5 5 0 0 1 0 6" /><path d="M19.364 18.364a9 9 0 0 0 0-12.728" /></symbol>
+    <symbol id="i-ui" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></symbol>
+    <symbol id="i-game-template" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11" /><line x1="8" x2="8" y1="9" y2="13" /><line x1="15" x2="15.01" y1="12" y2="12" /><line x1="18" x2="18.01" y1="10" y2="10" /><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" /></symbol>
+    <symbol id="i-game-system" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z" /></symbol>
+    <symbol id="i-tool-and-plugin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" /></symbol>
+    <symbol id="i-tutorials-examples" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" /><path d="M22 10v6" /><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" /></symbol>
+    <symbol id="s-idle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.1 2.182a10 10 0 0 1 3.8 0" /><path d="M13.9 21.818a10 10 0 0 1-3.8 0" /><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7" /><path d="M2.182 13.9a10 10 0 0 1 0-3.8" /><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69" /><path d="M21.818 10.1a10 10 0 0 1 0 3.8" /><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69" /><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" /></symbol>
+    <symbol id="s-busy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></symbol>
+    <symbol id="s-paused" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="3" width="5" height="18" rx="1" /><rect x="5" y="3" width="5" height="18" rx="1" /></symbol>
+    <symbol id="s-finished" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m16 9-5.5 5.5L8 12" /></symbol>
+    <symbol id="s-stopped" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></symbol>
+    <symbol id="s-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></symbol>
+  </svg>
+
+  <header class="header">
+    <h1 class="title"><img class="logo" src="icons/logo.svg" alt="" width="21" height="21">Fab Free Claimer</h1>
+    <span id="phase" class="phase tip" data-tip="Idle" aria-label="Idle"><svg class="phase-icon"><use id="phaseIcon" href="#s-idle"/></svg></span>
+  </header>
+
+  <form id="filters">
+    <section class="section">
+      <label class="label" for="query">Search</label>
+      <input id="query" class="input" type="text" placeholder="Search text, optional" autocomplete="off">
+      <label class="check tip" data-tip="Only listings sold by Quixel Megascans. Exact seller match, not a text search.">
+        <input id="quixelOnly" class="checkbox" type="checkbox" checked>
+        <span>Quixel Megascans only</span>
+      </label>
+    </section>
+
+    <section class="section">
+      <div class="group-head">
+        <span class="label">Types</span>
+        <span class="group-actions">
+          <button type="button" class="link" data-group="listingTypes" data-select="all">All</button>
+          <button type="button" class="link" data-group="listingTypes" data-select="none">None</button>
+        </span>
+      </div>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" name="listingTypes" value="3d-model" checked><svg><use href="#i-3d-model"/></svg><span>3D model</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="material"><svg><use href="#i-material"/></svg><span>Material</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="hdri"><svg><use href="#i-hdri"/></svg><span>HDRI</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="decal"><svg><use href="#i-decal"/></svg><span>Decal</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="brush"><svg><use href="#i-brush"/></svg><span>Brush</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="animation"><svg><use href="#i-animation"/></svg><span>Animation</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="vfx"><svg><use href="#i-vfx"/></svg><span>VFX</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="audio"><svg><use href="#i-audio"/></svg><span>Audio</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="ui"><svg><use href="#i-ui"/></svg><span>UI</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="game-template"><svg><use href="#i-game-template"/></svg><span>Game template</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="game-system"><svg><use href="#i-game-system"/></svg><span>Game system</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="tool-and-plugin"><svg><use href="#i-tool-and-plugin"/></svg><span>Tool and plugin</span></label>
+        <label class="chip"><input type="checkbox" name="listingTypes" value="tutorials-examples"><svg><use href="#i-tutorials-examples"/></svg><span>Tutorials</span></label>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="group-head">
+        <span class="label">Engines</span>
+        <span class="group-actions">
+          <button type="button" class="link" data-group="channels" data-select="all">All</button>
+          <button type="button" class="link" data-group="channels" data-select="none">None</button>
+        </span>
+      </div>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" name="channels" value="unreal-engine"><span>Unreal Engine</span></label>
+        <label class="chip"><input type="checkbox" name="channels" value="unity"><span>Unity</span></label>
+        <label class="chip"><input type="checkbox" name="channels" value="uefn"><span>UEFN</span></label>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="grid-2">
+        <div>
+          <span class="label tip" data-tip="Skip listings with an average rating below this. Click the same star again to clear.">Min stars</span>
+          <div id="stars" class="stars" role="radiogroup" aria-label="Minimum stars">
+            <button type="button" class="star" data-value="1" aria-label="1 star">&#9733;</button>
+            <button type="button" class="star" data-value="2" aria-label="2 stars">&#9733;</button>
+            <button type="button" class="star" data-value="3" aria-label="3 stars">&#9733;</button>
+            <button type="button" class="star" data-value="4" aria-label="4 stars">&#9733;</button>
+            <button type="button" class="star" data-value="5" aria-label="5 stars">&#9733;</button>
+          </div>
+          <input id="minRating" type="hidden" value="0">
+        </div>
+        <div>
+          <label class="label tip" for="minRatingCount" data-tip="Skip listings with fewer ratings than this. Higher means only popular items.">Min ratings</label>
+          <input id="minRatingCount" class="input" type="number" min="0" step="1" value="0">
+        </div>
+      </div>
+      <label class="check tip" data-tip="Skip listings Fab marks as mature.">
+        <input id="hideMature" class="checkbox" type="checkbox">
+        <span>Hide mature content</span>
+      </label>
+    </section>
+
+    <section class="section">
+      <label class="check">
+        <input id="advanced" class="checkbox" type="checkbox">
+        <span>Advanced</span>
+      </label>
+      <div id="advancedSection" class="advanced" hidden>
+        <span class="label tip" data-tip="Random wait between two adds, in seconds. Slower is safer for your account.">Wait</span>
+        <div class="grid-2">
+          <label class="field">Min seconds
+            <span class="input-wrap"><input id="paceMinSec" class="input" type="number" min="1" step="0.5" value="2"><button type="button" class="reset-field" data-target="paceMinSec" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+          </label>
+          <label class="field">Max seconds
+            <span class="input-wrap"><input id="paceMaxSec" class="input" type="number" min="1" step="0.5" value="4"><button type="button" class="reset-field" data-target="paceMaxSec" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+          </label>
+        </div>
+        <span class="label tip" data-tip="How many search pages of 24 listings to collect before adding them. Smaller starts adding sooner.">Batch</span>
+        <div class="grid-2">
+          <label class="field">Pages per batch
+            <span class="input-wrap"><input id="batchPages" class="input" type="number" min="1" max="100" step="1" value="20"><button type="button" class="reset-field" data-target="batchPages" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+          </label>
+          <label class="field">Pages fetched at once
+            <span class="input-wrap"><input id="parallelPages" class="input" type="number" min="1" max="8" step="1" value="4"><button type="button" class="reset-field" data-target="parallelPages" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+          </label>
+        </div>
+        <label class="field tip" data-tip="How many ownership checks run at the same time. Higher is faster, more load on Fab.">Ownership checks at once
+          <span class="input-wrap"><input id="parallelChecks" class="input" type="number" min="1" max="16" step="1" value="8"><button type="button" class="reset-field" data-target="parallelChecks" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+        </label>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button id="start" type="submit" class="button button-start">Start</button>
+      <button id="pauseResume" type="button" class="button button-pause" disabled>Pause</button>
+      <button id="stop" type="button" class="button button-stop" disabled>Stop</button>
+      <button id="reset" type="button" class="button button-ghost" title="Forget which listings were already done">Reset</button>
+    </div>
+  </form>
+
+  <section class="section">
+    <div class="progress"><div id="barFill" class="progress-indicator"></div></div>
+    <p id="status" class="status">Ready</p>
+    <p class="stats">
+      <span class="stat-added"><b id="countAdded">0</b> added</span>
+      <span class="stat-owned"><b id="countOwned">0</b> owned</span>
+      <span class="stat-skipped"><b id="countSkipped">0</b> skipped</span>
+      <span class="stat-failed"><b id="countFailed">0</b> failed</span>
+    </p>
+    <pre id="log" class="log"></pre>
+  </section>
+
+  <div id="tooltip" class="tooltip" hidden></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
