@@ -1,12 +1,25 @@
+<h1 align="center">Fab Tools</h1>
+
 <p align="center">
-  <img src="docs/logo.png" width="96" alt="Fab Free Claimer logo">
+  Two unofficial browser extensions for <a href="https://www.fab.com">Fab</a>, for Chrome and Edge.<br>
+  <b>Fab Free Claimer</b> adds free listings to your library.
+  <b>Fab Owned Library</b> keeps a local catalog of what you own.
 </p>
 
-<h1 align="center">Fab Free Claimer</h1>
+## Install
+
+1. Download this repo, or clone it.
+2. Open `chrome://extensions` or `edge://extensions`.
+3. Turn on **Developer mode** at the top right.
+4. Click **Load unpacked** and pick the `claimer` folder, or the `library` folder, or both.
+5. Log in to [fab.com](https://www.fab.com) in the same browser.
+
+Both extensions run a small script inside your fab.com tab. They call the same endpoints the Fab site uses, with your own login session. Nothing is downloaded. No data leaves your browser.
+
+## Fab Free Claimer
 
 <p align="center">
-  Adds free <a href="https://www.fab.com">Fab</a> listings to your library, with filters.<br>
-  Unofficial browser extension for Chrome and Edge.
+  <img src="docs/claimer-logo.png" width="64" alt="Fab Free Claimer logo">
 </p>
 
 <p align="center">
@@ -15,7 +28,7 @@
   <img src="docs/claimer-claiming.png" width="360" alt="Claiming">
 </p>
 
-## What it does
+### What it does
 
 - Finds free listings on Fab and adds them to your library, one by one.
 - Filters: search text, Quixel Megascans only, listing types, engines, min stars, min rating count, mature content.
@@ -25,15 +38,7 @@
 - Pause, change any setting, Resume. Stop at any time.
 - Remembers what it did, so the next run only handles new listings.
 
-## Install
-
-1. Download this repo, or clone it.
-2. Open `chrome://extensions` or `edge://extensions`.
-3. Turn on **Developer mode** at the top right.
-4. Click **Load unpacked** and pick the `claimer` folder.
-5. Log in to [fab.com](https://www.fab.com) in the same browser.
-
-## Use
+### Use
 
 1. Click the extension icon.
 2. Set the filters. The defaults get all free Quixel Megascans 3D models.
@@ -42,7 +47,7 @@
 
 Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel items are FBX and glTF, and only a few carry the Unreal Engine tag.
 
-## Filters
+### Filters
 
 | Filter | Meaning |
 | --- | --- |
@@ -54,7 +59,7 @@ Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel ite
 | Min ratings | Skip listings with fewer ratings than this. |
 | Hide mature content | Skip listings Fab marks as mature. |
 
-## Advanced
+### Advanced
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -65,14 +70,84 @@ Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel ite
 
 Each field has a small arrow that restores its default.
 
-## How it works
+## Fab Owned Library
 
-The extension runs a small script inside your fab.com tab. It calls the same endpoints the Fab site uses, with your own login session. For each listing it first asks Fab if you own it, then reads the listing's licenses and sends one add to library request. Nothing is downloaded. No data leaves your browser.
+<p align="center">
+  <img src="docs/library-logo.png" width="64" alt="Fab Owned Library logo">
+</p>
+
+<p align="center">
+  <img src="docs/library.png" width="800" alt="Library page">
+</p>
+
+### What it does
+
+- Opens a full tab with everything you own on Fab: image, title, seller, type, category, tags, formats, rating, license, acquired date.
+- Search and filter by type, seller, tag, and status. Sort by newest, title, or type.
+- Click an item for its gallery, facts, and description. Open it on Fab, recheck it, or copy its JSON.
+- Export the filtered list as one JSON file.
+- The catalog lives in your browser. Sync adds only what is new.
+
+### Use
+
+1. Click the extension icon. The library tab opens.
+2. Press **Sync**. The first run reads your whole library and fetches details for every item. Later runs fetch only new items.
+3. Filter with the sidebar. Press **Export** to save the current list as JSON.
+
+### Sync
+
+| Action | Meaning |
+| --- | --- |
+| Sync | Walks your library list, fetches details only for items not yet in the catalog. Safe to stop and run again. |
+| Full resync | Advanced. Fetches details again for every item. Refreshes tags, images, ratings, and gone status. |
+| Recheck | In the item drawer. Asks Fab about that one item now. |
+| Gone | Fab no longer shows the listing page, but you still own it. Filter with Status, Gone. |
+
+### Advanced
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| Details at once | 4 | Listing details fetched at the same time. |
+| Wait ms | 300 | Pause after each group of details. |
+| Include raw data in export | off | Adds the untouched Fab library record to each exported item. |
+| Clear catalog | | Deletes the local catalog. Your Fab library is not touched. |
+
+### Export format
+
+```json
+{
+  "exportedAt": "2026-09-07T10:00:00.000Z",
+  "count": 1,
+  "items": [
+    {
+      "uid": "578d0ceb-5ccb-425f-abd5-e791a21551b6",
+      "title": "African Slate Quarry",
+      "url": "https://www.fab.com/listings/578d0ceb-5ccb-425f-abd5-e791a21551b6",
+      "listingType": "3d-model",
+      "category": { "name": "Mountain", "path": "environments/mountain" },
+      "tags": ["Quarry", "Rock", "Stone"],
+      "seller": "Quixel Megascans",
+      "sellerUrl": "https://www.fab.com/sellers/Quixel%20Megascans",
+      "thumbnail": "https://media.fab.com/image_previews/...jpg",
+      "images": ["https://media.fab.com/image_previews/...jpg"],
+      "formats": ["unreal-engine", "fbx"],
+      "rating": { "average": 4.2, "count": 44 },
+      "isFree": true,
+      "isMature": false,
+      "publishedAt": "2026-08-18T13:03:51.624864Z",
+      "description": "Explore the African wilderness.",
+      "library": { "assetUid": "...", "acquiredAt": "2026-09-06T20:11:02Z", "license": "Professional" },
+      "status": "ok",
+      "syncedAt": "2026-09-07T09:58:41.000Z"
+    }
+  ]
+}
+```
 
 ## Limits and safety
 
-- Fab's terms forbid automated access. Using this may put your account at risk. Use it at your own risk.
-- The default wait keeps requests slow. Do not lower it far.
+- Fab's terms forbid automated access. Using these tools may put your account at risk. Use them at your own risk.
+- The default waits keep requests slow. Do not lower them far.
 - This project is not affiliated with Epic Games or Fab.
 
 ## License

@@ -2,7 +2,7 @@
 
 ## Lucide icons
 
-The icons inside `claimer/popup.html` come from [Lucide](https://lucide.dev).
+The icons inside `claimer/popup.html` and `library/library.html` come from [Lucide](https://lucide.dev).
 
 ISC License
 
@@ -14,10 +14,10 @@ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH RE
 
 ## Roboto font
 
-The files in `claimer/fonts` are the Roboto typeface by Christian Robertson, packaged by [Fontsource](https://fontsource.org).
+The files in `claimer/fonts` and `library/fonts` are the Roboto typeface by Christian Robertson, packaged by [Fontsource](https://fontsource.org).
 
 Licensed under the Apache License, Version 2.0. You may obtain a copy of the license at http://www.apache.org/licenses/LICENSE-2.0
 
 ## Design tokens
 
-The color and spacing tokens in `claimer/popup.css` follow the [shadcn/ui](https://ui.shadcn.com) neutral theme, MIT License, Copyright (c) 2023 shadcn.
+The color and spacing tokens in `claimer/popup.css` and `library/library.css` follow the [shadcn/ui](https://ui.shadcn.com) neutral theme, MIT License, Copyright (c) 2023 shadcn.

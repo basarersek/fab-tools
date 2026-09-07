@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Fab Owned Library",
+  "version": "1.0.0",
+  "description": "Local catalog of the Fab assets you own, with images and tags. Search, filter, recheck, export JSON. Unofficial, not affiliated with Epic Games.",
+  "permissions": ["storage", "scripting", "unlimitedStorage"],
+  "host_permissions": ["https://www.fab.com/*"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Fab Owned Library",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.fab.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
