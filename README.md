@@ -3,7 +3,8 @@
 <p align="center">
   Two unofficial browser extensions for <a href="https://www.fab.com">Fab</a>, for Chrome and Edge.<br>
   <b>Fab Free Claimer</b> adds free listings to your library.
-  <b>Fab Owned Library</b> keeps a local catalog of what you own.
+  <b>Fab Owned Library</b> keeps a local catalog of what you own.<br>
+  Both exist because Fab makes these two jobs slow by hand.
 </p>
 
 ## Install
@@ -29,6 +30,10 @@ Both extensions run a small script inside your fab.com tab. They call the same e
   &nbsp;&nbsp;
   <img src="docs/claimer-claiming.png" width="360" alt="Claiming">
 </p>
+
+### Why
+
+Fab has thousands of free listings, and each one takes a click, a license choice, and a page load to claim. Nobody does that two thousand times. This extension does the clicking for you, with filters so you only take what you want, at a pace that does not hammer Fab.
 
 ### What it does
 
@@ -81,6 +86,10 @@ Each field has a small arrow that restores its default.
 <p align="center">
   <img src="docs/library.png" width="800" alt="Library page">
 </p>
+
+### Why
+
+Once you own a few hundred assets, finding one again on Fab is hard. The library page has no tag filter, no seller filter, and no way to see everything at once. A friend asked for exactly this after giving up on the Fab library. This extension keeps your own catalog in the browser, so you filter by type, seller, and tag, see the images, and export the list as JSON to use anywhere else.
 
 ### What it does
 
