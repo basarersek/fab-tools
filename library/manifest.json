@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fab Owned Library",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Local catalog of the Fab assets you own, with images and tags. Search, filter, recheck, export JSON. Unofficial, not affiliated with Epic Games.",
   "permissions": ["storage", "scripting", "unlimitedStorage"],
   "host_permissions": ["https://www.fab.com/*"],

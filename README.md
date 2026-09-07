@@ -110,7 +110,8 @@ Each field has a small arrow that restores its default.
 | Details at once | 4 | Listing details fetched at the same time. |
 | Wait ms | 300 | Pause after each group of details. |
 | Include raw data in export | off | Adds the untouched Fab library record to each exported item. |
-| Clear catalog | | Deletes the local catalog. Your Fab library is not touched. |
+| Copy diagnostics | | Copies counts, settings, the log, and one raw library record. Paste it when reporting a problem. |
+| Reset catalog | | Deletes the local catalog. Your Fab library is not touched. Sync again to rebuild. |
 
 ### Export format
 

@@ -257,6 +257,7 @@ async function runSync(message) {
   const onEntries = async (entries) => {
     if (firstPage && entries[0]) {
       await log(`Library item keys: ${Object.keys(entries[0]).join(", ")}`);
+      await log(`Library sample: ${JSON.stringify(entries[0]).slice(0, 1500)}`);
       firstPage = false;
     }
     for (const entry of entries) {

@@ -637,6 +637,23 @@ field("export").addEventListener("click", () => {
   addLog(`Exported ${items.length} items`);
 });
 
+field("diagnostics").addEventListener("click", async () => {
+  const items = [...state.items.values()];
+  const count = (pick) => Object.fromEntries(countBy(items, pick));
+  const sample = items.find((item) => item.raw)?.raw || null;
+  const report = {
+    version: chrome.runtime.getManifest().version,
+    browser: navigator.userAgent,
+    settings: readSettings(),
+    catalog: { total: items.length, byType: count((item) => [item.listingType]), byStatus: count((item) => [item.status || "ok"]), bySeller: count((item) => [item.seller]) },
+    lastSync: (await chrome.storage.local.get(META_KEY))[META_KEY]?.lastSync || null,
+    log: state.log,
+    sampleLibraryRecord: sample,
+  };
+  await navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+  addLog("Diagnostics copied to the clipboard");
+});
+
 field("clear").addEventListener("click", async () => {
   if (!confirm(`Delete all ${state.items.size} items from the local catalog? Your Fab library is not touched.`)) return;
   await dbClear();

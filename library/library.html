@@ -38,6 +38,7 @@
     <symbol id="s-rechecking" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></symbol>
     <symbol id="s-advanced" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" /><path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" /></symbol>
     <symbol id="s-log" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 12h-5" /><path d="M15 8h-5" /><path d="M19 17V5a2 2 0 0 0-2-2H4" /><path d="M8 21h12a2 2 0 0 0 2-2v-1a1 1 0 0 0-1-1H11a1 1 0 0 0-1 1v1a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v2a1 1 0 0 0 1 1h3" /></symbol>
+    <symbol id="s-diagnostics" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2v2" /><path d="M5 2v2" /><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1" /><path d="M8 15a6 6 0 0 0 12 0v-3" /><circle cx="20" cy="10" r="2" /></symbol>
   </svg>
 
   <header class="topbar">
@@ -135,7 +136,8 @@
         <input id="includeRaw" class="checkbox" type="checkbox">
         <span>Include raw data in export</span>
       </label>
-      <button id="clear" type="button" class="button button-ghost danger"><svg><use href="#s-trash"/></svg>Clear catalog</button>
+      <button id="diagnostics" type="button" class="button button-outline tip" data-tip="Copies counts, settings, the log, and one raw library record. Paste it when reporting a problem."><svg><use href="#s-diagnostics"/></svg>Copy diagnostics</button>
+      <button id="clear" type="button" class="button button-ghost danger tip" data-tip="Deletes the local catalog only. Your Fab library is not touched. Sync again to rebuild."><svg><use href="#s-trash"/></svg>Reset catalog</button>
     </div>
 
     <div class="progress-row">
