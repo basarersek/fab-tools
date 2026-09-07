@@ -158,15 +158,19 @@ function showTooltip(target) {
   tooltip.style.top = `${top}px`;
 }
 
-for (const target of document.querySelectorAll(".tip")) {
-  target.addEventListener("mouseenter", () => {
-    tooltipTimer = setTimeout(() => showTooltip(target), 400);
-  });
-  target.addEventListener("mouseleave", () => {
-    clearTimeout(tooltipTimer);
-    tooltip.hidden = true;
-  });
-}
+// Delegated, so cards created later get tips too.
+document.addEventListener("mouseover", (event) => {
+  const target = event.target.closest(".tip");
+  if (!target || target.contains(event.relatedTarget)) return;
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(() => showTooltip(target), 400);
+});
+document.addEventListener("mouseout", (event) => {
+  const target = event.target.closest(".tip");
+  if (!target || target.contains(event.relatedTarget)) return;
+  clearTimeout(tooltipTimer);
+  tooltip.hidden = true;
+});
 
 // ---------- phase, status, log ----------
 
@@ -316,6 +320,10 @@ chrome.runtime.onMessage.addListener((message) => {
 
 const isGone = (item) => item.status && item.status !== "ok";
 const statusLabel = (item) => (item.status === "gone" ? "unlisted" : item.status);
+const statusTip = {
+  gone: "The seller removed this product from the store. You still own it and can download it from your Fab library.",
+  "not owned": "Fab no longer lists this product in your library. Check your Fab library, then recheck here.",
+};
 
 function matches(item) {
   const f = state.filters;
@@ -480,11 +488,16 @@ function card(item) {
   seller.textContent = item.seller || "";
   const pills = document.createElement("div");
   pills.className = "card-pills";
-  for (const text of [typeLabels[item.listingType] || item.listingType, isGone(item) ? statusLabel(item) : null].filter(Boolean)) {
-    const pill = document.createElement("span");
-    pill.className = "pill";
-    pill.textContent = text;
-    pills.append(pill);
+  const typePill = document.createElement("span");
+  typePill.className = "pill";
+  typePill.textContent = typeLabels[item.listingType] || item.listingType || "";
+  pills.append(typePill);
+  if (isGone(item)) {
+    const statusPill = document.createElement("span");
+    statusPill.className = "pill tip";
+    statusPill.textContent = statusLabel(item);
+    statusPill.dataset.tip = statusTip[item.status] || item.status;
+    pills.append(statusPill);
   }
   body.append(title, seller, pills);
   article.append(thumb, body);
