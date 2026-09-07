@@ -31,7 +31,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const state = {
   items: new Map(),
-  filters: { text: "", types: new Set(), sellers: new Set(), tags: new Set(), status: "ok", hideMature: false, sort: "acquired" },
+  filters: { text: "", types: new Set(), sellers: new Set(), tags: new Set(), status: "ok", hideMature: true, sort: "acquired" },
   tagSearch: "",
   shown: PAGE_STEP,
   selectedUid: null,

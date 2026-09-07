@@ -57,7 +57,7 @@ Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel ite
 | Engines | Engine tags to include. None checked means all. |
 | Min stars | Skip listings with an average rating below this. |
 | Min ratings | Skip listings with fewer ratings than this. |
-| Hide mature content | Skip listings Fab marks as mature. |
+| Hide mature content | Skip listings Fab marks as mature. On by default. |
 
 ### Advanced
 
