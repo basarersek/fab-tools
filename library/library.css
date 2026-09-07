@@ -100,8 +100,7 @@ body[data-phase="syncing"] .phase-icon, body[data-phase="rechecking"] .phase-ico
 
 .advanced-bar {
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  align-items: flex-start;
   gap: var(--s4);
   width: min(100%, var(--column));
   margin: 0 auto var(--s3);
@@ -109,9 +108,13 @@ body[data-phase="syncing"] .phase-icon, body[data-phase="rechecking"] .phase-ico
   border-bottom: 1px solid var(--border);
 }
 .advanced-bar[hidden] { display: none; }
-.advanced-bar .check { height: var(--s5); }
 .advanced-bar .field { width: 144px; }
-.advanced-bar .danger { margin-left: auto; color: var(--red); }
+.advanced-bar .field.grow { flex: 1; width: auto; }
+.field-label { font-size: 12px; font-weight: 500; line-height: 1; }
+.control { height: var(--s5); }
+.control-row { display: flex; justify-content: flex-end; gap: var(--s2); }
+.button.danger { color: var(--red); border-color: hsl(0 84% 60% / 0.5); }
+.button.danger:hover { background: hsl(0 84% 60% / 0.12); }
 
 /* ---------- progress and log ---------- */
 

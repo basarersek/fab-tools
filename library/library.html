@@ -122,23 +122,30 @@
 
     <main class="main">
     <div id="advancedBar" class="advanced-bar" hidden>
-      <label class="check tip" data-tip="Fetch details again for every item, not only new ones.">
-        <input id="fullResync" class="checkbox" type="checkbox">
-        <span>Full resync</span>
-      </label>
-      <label class="field tip" data-tip="Listing details fetched at the same time. Higher is faster, more load on Fab.">Details at once
-        <span class="input-wrap"><input id="detailsAtOnce" class="input" type="number" min="1" max="8" step="1" value="4"><button type="button" class="reset-field" data-target="detailsAtOnce" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
-      </label>
-      <label class="field tip" data-tip="Wait after each group of details, in milliseconds.">Wait ms
-        <span class="input-wrap"><input id="waitMs" class="input" type="number" min="0" max="10000" step="50" value="300"><button type="button" class="reset-field" data-target="waitMs" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
-      </label>
-      <label class="check tip" data-tip="Add the untouched Fab library record to each exported item.">
-        <input id="includeRaw" class="checkbox" type="checkbox">
-        <span>Include raw data in export</span>
-      </label>
-      <button id="diagnostics" type="button" class="button button-outline tip" data-tip="Copies counts, settings, the log, and one raw library record. Paste it when reporting a problem."><svg><use href="#s-diagnostics"/></svg>Copy diagnostics</button>
-      <button id="clear" type="button" class="button button-ghost danger tip" data-tip="Deletes the local catalog only. Your Fab library is not touched. Sync again to rebuild."><svg><use href="#s-trash"/></svg>Reset catalog</button>
-    </div>
+        <div class="field">
+          <span class="field-label tip" data-tip="Fetch details again for every item, not only new ones.">Sync</span>
+          <label class="check control"><input id="fullResync" class="checkbox" type="checkbox"><span>Full resync</span></label>
+        </div>
+        <div class="field">
+          <span class="field-label tip" data-tip="Listing details fetched at the same time. Higher is faster, more load on Fab.">Details at once</span>
+          <span class="input-wrap"><input id="detailsAtOnce" class="input" type="number" min="1" max="8" step="1" value="4"><button type="button" class="reset-field" data-target="detailsAtOnce" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+        </div>
+        <div class="field">
+          <span class="field-label tip" data-tip="Wait after each group of details, in milliseconds.">Wait ms</span>
+          <span class="input-wrap"><input id="waitMs" class="input" type="number" min="0" max="10000" step="50" value="300"><button type="button" class="reset-field" data-target="waitMs" aria-label="Reset to default"><svg><use href="#s-reset"/></svg></button></span>
+        </div>
+        <div class="field">
+          <span class="field-label tip" data-tip="Add the untouched Fab library record to each exported item.">Export</span>
+          <label class="check control"><input id="includeRaw" class="checkbox" type="checkbox"><span>Include raw data</span></label>
+        </div>
+        <div class="field grow">
+          <span class="field-label">Catalog</span>
+          <div class="control-row">
+            <button id="diagnostics" type="button" class="button button-outline tip" data-tip="Copies counts, settings, the log, and one raw library record. Paste it when reporting a problem."><svg><use href="#s-diagnostics"/></svg>Copy diagnostics</button>
+            <button id="clear" type="button" class="button button-outline danger tip" data-tip="Deletes the local catalog only. Your Fab library is not touched. Sync again to rebuild."><svg><use href="#s-trash"/></svg>Reset catalog</button>
+          </div>
+        </div>
+      </div>
 
     <div class="progress-row">
       <div class="progress"><div id="barFill" class="progress-indicator"></div></div>
