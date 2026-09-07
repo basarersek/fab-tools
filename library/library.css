@@ -56,16 +56,18 @@ svg { fill: none; }
 
 /* ---------- top bar ---------- */
 
+/* Same split as the page below: title over the sidebar, panel centered over the main area. */
 .topbar {
   z-index: 5;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: calc(var(--sidebar) - var(--s4)) 1fr;
   align-items: center;
   gap: var(--s3);
   padding: var(--s2) var(--s4);
   background: var(--background);
   border-bottom: 1px solid var(--border);
 }
+.panel { justify-self: center; }
 .panel {
   display: flex;
   align-items: center;

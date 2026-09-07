@@ -111,8 +111,8 @@ function makeResizable(handle) {
   const grows = handle.dataset.side === "right" ? 1 : -1;
   const apply = (width) => {
     const clamped = Math.min(window.innerWidth * 0.8, Math.max(160, width));
-    panel.style.width = `${clamped}px`;
-    panel.style.flexBasis = `${clamped}px`;
+    if (handle.dataset.target === "sidebar") document.documentElement.style.setProperty("--sidebar", `${clamped}px`);
+    else panel.style.width = `${clamped}px`;
     return clamped;
   };
   const saved = Number(localStorage.getItem(key));
