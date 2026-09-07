@@ -474,15 +474,18 @@ function card(item) {
   const title = document.createElement("div");
   title.className = "card-title";
   title.textContent = item.title;
-  const meta = document.createElement("div");
-  meta.className = "card-meta";
-  const lines = [item.seller, typeLabels[item.listingType] || item.listingType, isGone(item) ? item.status : null];
-  for (const text of lines.filter(Boolean)) {
-    const line = document.createElement("span");
-    line.textContent = text;
-    meta.append(line);
+  const seller = document.createElement("div");
+  seller.className = "card-seller";
+  seller.textContent = item.seller || "";
+  const pills = document.createElement("div");
+  pills.className = "card-pills";
+  for (const text of [typeLabels[item.listingType] || item.listingType, isGone(item) ? item.status : null].filter(Boolean)) {
+    const pill = document.createElement("span");
+    pill.className = "pill";
+    pill.textContent = text;
+    pills.append(pill);
   }
-  body.append(title, meta);
+  body.append(title, seller, pills);
   article.append(thumb, body);
   return article;
 }

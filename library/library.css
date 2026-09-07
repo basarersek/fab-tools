@@ -344,8 +344,19 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 .thumb svg { width: 21px; height: 21px; stroke: var(--muted-foreground); }
 .card-body { padding: var(--s2) var(--s3) var(--s3); }
 .card-title { font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.card-meta { margin-top: var(--s1); font-size: 12px; line-height: 1.4; }
-.card-meta span { display: block; }
+.card-seller { margin-top: var(--s1); font-size: 12px; line-height: 1.4; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.card-pills { display: flex; flex-wrap: wrap; gap: var(--s1); margin-top: var(--s2); }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 var(--s2);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--muted);
+}
 
 /* ---------- drawer ---------- */
 
