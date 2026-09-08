@@ -1,5 +1,7 @@
 // Runs inside fab.com tabs. Does the search and the add to library calls.
 // Requests must come from the fab.com page so the CSRF check passes.
+// Bump with the manifest version so the popup can spot a stale tab.
+const SCRIPT_VERSION = "1.5.0";
 
 const PROGRESS_KEY = "fabClaimProgress";
 const DONE_KEY = "fabClaimDone";
@@ -19,6 +21,10 @@ const searchFilterKeys = ["query", "listingTypes", "channels", "quixelOnly"];
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "start") {
+    if (message.minVersion && message.minVersion !== SCRIPT_VERSION) {
+      sendResponse({ ok: false, error: `Tab runs claimer ${SCRIPT_VERSION}, popup is ${message.minVersion}. Reload the fab.com tab and start again.` });
+      return;
+    }
     if (running) {
       sendResponse({ ok: false, error: "Already running in this tab." });
       return;
@@ -57,6 +63,7 @@ const getCookie = (name) =>
   document.cookie.split("; ").find((c) => c.startsWith(name + "="))?.split("=")[1];
 
 function applyNewFilters(filters) {
+  if (!filters.mode) filters.mode = currentFilters.mode;
   const searchChanged = searchFilterKeys.some(
     (key) => JSON.stringify(filters[key]) !== JSON.stringify(currentFilters[key]));
   currentFilters = filters;
@@ -186,25 +193,58 @@ async function collectBatch(baseUrl, startOffset, headers) {
 }
 
 // Returns true when the library already holds this listing.
+// Throws on auth or repeated failure so a failed check never looks like not owned.
 async function isOwned(uid, headers) {
-  const res = await fetch(`/i/users/me/listings-states/${uid}?fields=ownership`, {
-    credentials: "include",
-    headers,
-  });
-  if (res.status === 401 || res.status === 403) throw new Error("auth");
-  if (!res.ok) return false;
-  const data = await res.json();
-  return Array.isArray(data.ownership) && data.ownership.length > 0;
+  const url = `/i/users/me/listings-states/${uid}?fields=ownership`;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, { credentials: "include", headers });
+    if (res.status === 401 || res.status === 403) throw new Error("auth");
+    if (res.ok) {
+      const data = await res.json();
+      return Array.isArray(data.ownership) && data.ownership.length > 0;
+    }
+    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+      await sleep(RETRY_WAIT_MS * attempt);
+      continue;
+    }
+    throw new Error(`ownership check answered ${res.status}`);
+  }
+}
+
+// One listing page read, shared so each item costs a single fetch.
+async function fetchDetail(uid, headers) {
+  const res = await fetch(`/i/listings/${uid}`, { credentials: "include", headers });
+  if (!res.ok) return { status: res.status, data: null };
+  return { status: 0, data: await res.json() };
+}
+
+function detailIsFree(data) {
+  return data.isFree === true || data.startingPrice?.price === 0;
 }
 
 // The search offer is the Personal license. Prefer the free Professional one.
+// Limited time items are paid assets cut to free, so several price shapes count as free.
+function chooseOffer(item, data) {
+  const fallback = { offerId: item.offerId, license: "Personal", title: item.title };
+  const title = data.title || item.title;
+  const licenses = data.licenses || [];
+  const isFreePrice = (l) =>
+    l.priceTier?.price === 0 || l.price === 0 ||
+    l.priceTier?.discountedPrice === 0 || l.priceTier?.finalPrice === 0 ||
+    l.priceTier?.salePrice === 0 || l.discountedPrice === 0 || l.finalPrice === 0 ||
+    l.discountPercentage === 100 || l.discount === 100;
+  const free = licenses.filter((l) => l.offerId && isFreePrice(l));
+  const chosen = free.find((l) => l.slug === "professional") || free[0];
+  if (chosen) return { offerId: chosen.offerId, license: chosen.name, title };
+  const sample = licenses[0] ? JSON.stringify(licenses[0]).slice(0, 500) : "none";
+  return { ...fallback, title, detailFree: detailIsFree(data), debug: `${licenses.length} licenses, page keys: ${Object.keys(data).join(",")}, first: ${sample}` };
+}
+
+// Same fetch, kept for search mode.
 async function pickOffer(item, headers) {
-  const fallback = { offerId: item.offerId, license: "Personal" };
-  const res = await fetch(`/i/listings/${item.uid}`, { credentials: "include", headers });
-  if (!res.ok) return fallback;
-  const licenses = ((await res.json()).licenses || []).filter((l) => l.offerId && l.priceTier?.price === 0);
-  const chosen = licenses.find((l) => l.slug === "professional") || licenses[0];
-  return chosen ? { offerId: chosen.offerId, license: chosen.name } : fallback;
+  const { status, data } = await fetchDetail(item.uid, headers);
+  if (!data) return { offerId: item.offerId, license: "Personal", title: item.title, detailStatus: status };
+  return chooseOffer(item, data);
 }
 
 async function postAddToLibrary(endpoint, headers, contentType, body) {
@@ -245,6 +285,134 @@ async function addToLibrary(item, headers) {
     return `failed ${res.status}: ${(await res.text()).slice(0, 200)}`;
   }
   return "failed: too many retries";
+}
+
+const LIMITED_URL = "/limited-time-free";
+const LIMITED_FREE_KEY = "fabLimitedFree";
+
+// The page is server rendered HTML, so its listing links are the catalog.
+async function collectLimitedUids() {
+  const res = await fetch(LIMITED_URL, { credentials: "include" });
+  if (!res.ok) throw new Error(`Limited time free page failed with status ${res.status}`);
+  const html = await res.text();
+  const uids = new Set();
+  const pattern = /\/listings\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/g;
+  let match;
+  while ((match = pattern.exec(html)) !== null) uids.add(match[1].toLowerCase());
+  return [...uids];
+}
+
+// The page links paid extras too, so phase one keeps only truly free listings.
+// Counts and the bar then cover the free ones alone.
+async function claimLimitedList(uids, headers) {
+  const done = await loadDone();
+  progress.phase = "collecting";
+  await saveProgress();
+  const free = [];
+  let extras = 0;
+  for (const uid of uids) {
+    if (stopRequested) return;
+    if (done.has(uid)) {
+      free.push({ uid, data: null });
+      continue;
+    }
+    const { status, data } = await fetchDetail(uid, headers);
+    if (!data) {
+      if (status === 401 || status === 403) {
+        await log("Not logged in. Log in to fab.com and start again.");
+        return;
+      }
+      progress.failed++;
+      await log(`${uid.slice(0, 8)}: listing page answered ${status}`);
+      continue;
+    }
+    if (detailIsFree(data)) free.push({ uid, data });
+    else {
+      // Paid extras are ignored, unless owned, so owned ones still report truly.
+      try {
+        if (await isOwned(uid, headers)) free.push({ uid, data });
+        else extras++;
+      } catch (error) {
+        if (error.message === "auth") {
+          await log("Not logged in. Log in to fab.com and start again.");
+          return;
+        }
+        progress.failed++;
+        await log(`${data.title || uid.slice(0, 8)}: ownership check failed (${error.message})`);
+      }
+    }
+  }
+  progress.found = free.length;
+  progress.moreToFind = false;
+  await log(`Limited time free: ${uids.length} links found, ${free.length} free${extras ? `, ${extras} paid extras ignored` : ""}`);
+  try {
+    await chrome.storage.local.set({ [LIMITED_FREE_KEY]: free.map((item) => item.uid) });
+  } catch {
+    // Extension reloaded mid run. The claim still finishes.
+  }
+  let diagnosed = false;
+  for (const item of free) {
+    await waitWhilePaused();
+    if (stopRequested) return;
+    progress.phase = "claiming";
+    if (done.has(item.uid)) {
+      progress.skipped++;
+      progress.doneEarlier++;
+      progress.index++;
+      await saveProgress();
+      continue;
+    }
+    let owned = false;
+    try {
+      owned = await isOwned(item.uid, headers);
+    } catch (error) {
+      if (error.message === "auth") {
+        await log("Not logged in. Log in to fab.com and start again.");
+        return;
+      }
+      progress.failed++;
+      progress.index++;
+      await log(`${item.data.title || item.uid.slice(0, 8)}: ownership check failed (${error.message})`);
+      await saveProgress();
+      continue;
+    }
+    if (owned) {
+      await markDone({ uid: item.uid }, done, "owned");
+      await log(`${item.data?.title || item.uid.slice(0, 8)}: already in library`);
+      progress.index++;
+      await saveProgress();
+      continue;
+    }
+    const offer = chooseOffer({ uid: item.uid, title: item.data.title || item.uid.slice(0, 8) }, item.data);
+    if (!offer.offerId) {
+      progress.failed++;
+      await log(`${offer.title}: no free offer found`);
+      if (!diagnosed && offer.debug) {
+        diagnosed = true;
+        await log(`Shape: ${offer.debug}`);
+      }
+      progress.index++;
+      await saveProgress();
+      continue;
+    }
+    const result = await addToLibrary({ uid: item.uid, offerId: offer.offerId }, headers);
+    if (result === "added") {
+      await markDone({ uid: item.uid }, done, "added");
+      await log(`${offer.title}: added (${offer.license})`);
+    } else if (result === "owned") {
+      await markDone({ uid: item.uid }, done, "owned");
+      await log(`${offer.title}: already in library`);
+    } else if (result === "auth") {
+      await log("Not logged in. Log in to fab.com and start again.");
+      return;
+    } else {
+      progress.failed++;
+      await log(`${offer.title}: ${result}`);
+    }
+    progress.index++;
+    await saveProgress();
+    await sleep(randomBetween(currentFilters.paceMinSec * 1000, currentFilters.paceMaxSec * 1000));
+  }
 }
 
 // ---------- main loop ----------
@@ -384,7 +552,13 @@ async function runClaim(filters) {
   try {
     const headers = await getCsrfHeaders();
     if (!headers) throw new Error("No CSRF cookie. Log in to fab.com first.");
-    await claimInBatches(headers);
+    if (currentFilters.mode === "limited") {
+      await log("Limited time free: search filters do not apply, only the wait setting.");
+      const uids = await collectLimitedUids();
+      await claimLimitedList(uids, headers);
+    } else {
+      await claimInBatches(headers);
+    }
   } catch (error) {
     await log(`Error: ${error.message}`);
   }

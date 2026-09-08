@@ -237,6 +237,8 @@ body[data-phase="collecting"] .phase-icon, body[data-phase="claiming"] .phase-ic
 /* ---------- buttons ---------- */
 
 .actions { display: flex; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--border); }
+.actions + .actions { padding-top: var(--s2); border-top: 0; }
+.actions-promo .button { flex: 1; }
 .actions .button { flex: 1; }
 .actions .button-ghost { flex: 0 0 auto; }
 
@@ -264,6 +266,7 @@ body[data-phase="collecting"] .phase-icon, body[data-phase="claiming"] .phase-ic
 .button:disabled { pointer-events: none; opacity: 0.35; }
 
 .button-start { background: var(--green-strong); }
+.button-limited { background: hsl(217 91% 35%); }
 .button-stop { background: var(--red-strong); }
 .button-pause { color: var(--amber); background: transparent; border-color: var(--amber); }
 .button-pause:hover { background: hsl(43 96% 56% / 0.12); }
@@ -308,3 +311,5 @@ body[data-phase="stopped"] .progress-indicator { background: var(--red); }
 }
 
 .label small { font-weight: 400; opacity: 0.6; }
+.drop-eta { margin: 0; font-size: 13px; color: var(--muted-foreground); }
+.drop-eta[hidden] { display: none; }

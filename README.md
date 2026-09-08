@@ -44,6 +44,9 @@ Fab has thousands of free listings, and each one takes a click, a license choice
 - Works in batches, so adding starts a few seconds after Start.
 - Pause, change any setting, Resume. Stop at any time.
 - Remembers what it did, so the next run only handles new listings.
+- Claims the fab.com/limited-time-free page with its own button. Paid extras linked on that page are ignored in one line, counts cover the free ones alone.
+- Locks the limited button with Limited free claimed once every current item is handled.
+- Optional watch: reads the Until date on the page, sets a timer for just after the drop, and shows a Chrome notice with new items. The popup counts down live, the toolbar icon shows time left.
 
 ### Use
 
@@ -53,6 +56,12 @@ Fab has thousands of free listings, and each one takes a click, a license choice
 4. Watch the counts. The log shows every added listing.
 
 Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel items are FBX and glTF, and only a few carry the Unreal Engine tag.
+
+### Limited time free
+
+1. Press **Claim limited time free**. Search filters do not apply, only the wait setting.
+2. Tick **Notify me about new limited time free** to get a Chrome notice when the next drop lands. Click the notice to open the page.
+3. The popup counts down to the drop. The button locks once all current items sit in your library. Reset clears memory and unlocks it.
 
 ### Filters
 
