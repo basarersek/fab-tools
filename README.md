@@ -17,7 +17,7 @@
 
 Chrome only installs packed extensions from its Web Store, so these come as zip files. To update, unzip the new release over the old folder and press the reload icon on the extensions page.
 
-Both extensions run a small script inside your fab.com tab. They call the same endpoints the Fab site uses, with your own login session. Nothing is downloaded. No data leaves your browser.
+Both extensions use your Fab login session. Normal free claims and library sync use Fab requests. Limited free claims open Epic's official checkout. The extensions do not save login credentials or purchase tokens.
 
 ## Fab Free Claimer
 
@@ -42,10 +42,12 @@ Fab has thousands of free listings, and each one takes a click, a license choice
 - Skips listings you already own. Nothing is added twice.
 - Picks the free Professional license when a listing has one, else the free Personal one.
 - Works in batches, so adding starts a few seconds after Start.
-- Pause, change any setting, Resume. Stop at any time.
+- Pause normal free search, change settings, then Resume. Stop a limited claim from the popup.
 - Remembers what it did, so the next run only handles new listings.
-- Claims the fab.com/limited-time-free page with its own button. Paid extras linked on that page are ignored in one line, counts cover the free ones alone.
-- Locks the limited button with Limited free claimed once every current item is handled.
+- Claims only assets in Fab's current promotion list. Links inside descriptions are ignored.
+- Uses the official checkout for promotional discounts. Checks the selected license, zero total, and zero payment before submission.
+- Verifies ownership after checkout before recording success.
+- Disables the limited button immediately during a run. Shows Limited free claimed when all current assets are owned. A new promotion unlocks it.
 - Optional watch: reads the Until date on the page, sets a timer for just after the drop, and shows a Chrome notice with new items. The popup counts down live, the toolbar icon shows time left.
 
 ### Use
@@ -59,9 +61,17 @@ Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel ite
 
 ### Limited time free
 
-1. Press **Claim limited time free**. Search filters do not apply, only the wait setting.
-2. Tick **Notify me about new limited time free** to get a Chrome notice when the next drop lands. Click the notice to open the page.
-3. The popup counts down to the drop. The button locks once all current items sit in your library. Reset clears memory and unlocks it.
+1. Press **Claim limited time free**. Search filters do not apply. The extension chooses free Professional, otherwise free Personal.
+2. Keep the Fab tab open. Each unowned asset opens its own checkout. No unrelated cart items are included.
+3. Complete CAPTCHA or review any agreement if Fab asks. The popup shows when action is needed. The extension records success only after Fab confirms ownership.
+4. The button stays disabled when all current assets are owned. Reset clears saved progress but does not remove ownership. A new promotion unlocks the button.
+5. Tick **Notify me about new limited time free** for notices about new assets. The popup and toolbar keep their countdowns.
+
+### Version 1.5.1
+
+Fixes promotional claims that failed with “Not free.” Uses verified checkout data instead of trying library offers. Keeps normal free search, notifications, countdowns, and the popup layout.
+
+Run `bun test tests/limited.test.js` from the repository folder for local checks. See [checkout verification](claimer/TESTING.md) for the observed flow and live test result. No build is required.
 
 ### Filters
 

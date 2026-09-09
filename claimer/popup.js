@@ -3,11 +3,14 @@ const DONE_KEY = "fabClaimDone";
 const FILTERS_KEY = "fabClaimFilters";
 const EXT_VERSION = chrome.runtime.getManifest().version;
 const LIMITED_FREE_KEY = "fabLimitedFree";
-const LIMITED_PAGE_URL = "https://www.fab.com/limited-time-free";
-const UID_PATTERN = /\/listings\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/g;
 const LIMITED_EXPLAIN = "Claims everything on fab.com/limited-time-free, Professional license when free";
 const FAB_URL = "https://www.fab.com/";
 const CONTENT_SCRIPT_RETRIES = 10;
+let startPending = false;
+let activeRun = false;
+let limitedOwned = false;
+let limitedChecking = true;
+let limitedCheck = 0;
 
 const fieldIds = [
   "query", "quixelOnly", "minRating", "minRatingCount", "hideMature", "watchLimited",
@@ -136,7 +139,11 @@ field("watchLimited").addEventListener("change", async () => {
 
 async function getFabTab(create = true) {
   const tabs = await chrome.tabs.query({ url: "https://www.fab.com/*" });
-  if (tabs.length > 0) return tabs[0];
+  const eligible = tabs.filter((tab) => !tab.url?.includes("/payment/"));
+  const stored = await chrome.storage.local.get(PROGRESS_KEY);
+  const owner = eligible.find((tab) => tab.id === stored[PROGRESS_KEY]?.runnerTabId);
+  if (owner) return owner;
+  if (eligible.length > 0) return eligible.sort((a, b) => a.id - b.id)[0];
   if (!create) return null;
   return chrome.tabs.create({ url: FAB_URL, active: false });
 }
@@ -144,7 +151,7 @@ async function getFabTab(create = true) {
 // A second copy of content.js fails to load, so injecting twice is safe.
 async function injectContentScript(tabId) {
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ["limited.js", "content.js"] });
   } catch {
     // Already loaded, or the tab is still loading. The retry loop handles it.
   }
@@ -156,6 +163,10 @@ async function sendToFab(message, create = true) {
   if (!tab) throw new Error("No fab.com tab open yet.");
   for (let attempt = 1; attempt <= CONTENT_SCRIPT_RETRIES; attempt++) {
     try {
+      if (message.type === "start") {
+        const pong = await chrome.tabs.sendMessage(tab.id, { type: "ping" });
+        if (pong.revision !== 2) return { ok: false, error: "Reload the Fab tab after reloading the extension." };
+      }
       return await chrome.tabs.sendMessage(tab.id, message);
     } catch {
       await injectContentScript(tab.id);
@@ -167,7 +178,7 @@ async function sendToFab(message, create = true) {
 
 // ---------- progress display ----------
 
-const iconByPhase = { collecting: "busy", claiming: "busy" };
+const iconByPhase = { collecting: "busy", claiming: "busy", action: "paused", error: "stopped" };
 
 function setPhase(phase) {
   const label = phase[0].toUpperCase() + phase.slice(1);
@@ -178,15 +189,17 @@ function setPhase(phase) {
 }
 
 function render(progress) {
+  activeRun = Boolean(progress?.running);
+  if (progress?.mode === "limited" && progress.phase === "finished" && progress.found > 0 &&
+    progress.index === progress.found && progress.added + progress.owned === progress.found) limitedOwned = true;
   const startButton = field("start");
-  const limitedButton = field("claimLimited");
   const pauseButton = field("pauseResume");
   if (!progress) {
     setPhase("idle");
     field("status").textContent = "Ready";
     field("barFill").style.width = "0";
-    startButton.disabled = false;
-    limitedButton.disabled = false;
+    startButton.disabled = startPending;
+    paintLimitedButton();
     pauseButton.disabled = true;
     field("stop").disabled = true;
     updateLimitedState();
@@ -207,11 +220,13 @@ function render(progress) {
   field("countSkipped").textContent = progress.skipped;
   field("countFailed").textContent = progress.failed;
 
-  startButton.disabled = progress.running;
-  limitedButton.disabled = progress.running;
-  pauseButton.disabled = !progress.running;
+  startButton.disabled = startPending || progress.running;
+  paintLimitedButton();
+  pauseButton.disabled = !progress.running || progress.mode === "limited";
   field("stop").disabled = !progress.running;
   pauseButton.textContent = progress.phase === "paused" ? "Resume" : "Pause";
+
+  if (progress.phase === "action") field("status").textContent = "Action needed in the Fab checkout tab.";
 
   const logBox = field("log");
   logBox.textContent = progress.log.join("\n");
@@ -225,6 +240,10 @@ async function refresh() {
   try {
     // Storage may say idle while the tab still runs, after a Reset or a reload.
     const pong = await sendToFab({ type: "ping" }, false);
+    if (!pong?.running && progress?.running) {
+      progress = { ...progress, running: false, phase: "stopped" };
+      await chrome.storage.local.set({ [PROGRESS_KEY]: progress });
+    }
     if (pong?.running && !progress?.running) {
       progress = {
         running: true, phase: "claiming", found: 0, index: 0, moreToFind: false,
@@ -246,41 +265,30 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-// Locks the limited button only when every free item of the current page
-// is already handled. Paid extras never gate it. Any doubt leaves it enabled.
-async function updateLimitedState() {
+function paintLimitedButton() {
   const button = field("claimLimited");
-  const enable = () => {
-    button.disabled = false;
-    button.textContent = "Claim limited time free";
-    button.title = LIMITED_EXPLAIN;
-  };
+  button.disabled = startPending || activeRun || limitedOwned || limitedChecking;
+  button.textContent = limitedOwned ? "Limited free claimed" : "Claim limited time free";
+  button.title = limitedOwned ? "Every current promotional asset is in your library." : LIMITED_EXPLAIN;
+}
+
+async function updateLimitedState() {
+  const check = ++limitedCheck;
+  if (startPending || activeRun) return;
+  limitedChecking = true;
+  paintLimitedButton();
   try {
-    const stored = await chrome.storage.local.get([PROGRESS_KEY, DONE_KEY, LIMITED_FREE_KEY]);
-    if (stored[PROGRESS_KEY]?.running) return;
-    const res = await fetch(LIMITED_PAGE_URL, { credentials: "include" });
-    if (!res.ok) {
-      enable();
-      return;
-    }
-    const html = await res.text();
-    const page = new Set();
-    UID_PATTERN.lastIndex = 0;
-    let m;
-    while ((m = UID_PATTERN.exec(html)) !== null) page.add(m[1].toLowerCase());
-    const free = stored[LIMITED_FREE_KEY] || [];
-    const done = new Set(stored[DONE_KEY] || []);
-    const allDone = free.length > 0 && free.every((uid) => page.has(uid) && done.has(uid));
-    if (!allDone) {
-      enable();
-      return;
-    }
-    button.disabled = true;
-    button.textContent = "Limited free claimed";
-    button.title = "Every current limited time free item is already in your library.";
-  } catch {
-    enable();
+    const current = await FabLimited.promotion();
+    const owned = await FabLimited.owned(current.uids);
+    if (check !== limitedCheck || startPending || activeRun) return;
+    limitedOwned = current.uids.length > 0 && owned.length === current.uids.length;
+  } catch (error) {
+    if (check !== limitedCheck || startPending || activeRun) return;
+    limitedOwned = false;
+    field("claimLimited").title = error.message;
   }
+  limitedChecking = false;
+  paintLimitedButton();
 }
 
 // ---------- next drop countdown ----------
@@ -321,33 +329,35 @@ async function refreshDrop() {
 
 // ---------- buttons ----------
 
-field("filters").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const filters = readFilters();
-  filters.mode = "search";
-  if (filters.paceMaxSec < filters.paceMinSec) filters.paceMaxSec = filters.paceMinSec;
-  await chrome.storage.local.set({ [FILTERS_KEY]: filters });
+async function startClaim(mode) {
+  if (startPending || activeRun || (mode === "limited" && limitedOwned)) return;
+  startPending = true;
+  limitedCheck++;
+  paintLimitedButton();
+  field("start").disabled = true;
+  field("status").textContent = "Starting claim...";
   try {
+    const filters = { ...readFilters(), mode };
+    if (filters.paceMaxSec < filters.paceMinSec) filters.paceMaxSec = filters.paceMinSec;
+    await chrome.storage.local.set({ [FILTERS_KEY]: filters });
     const answer = await sendToFab({ type: "start", filters, minVersion: EXT_VERSION });
-    if (!answer.ok) field("status").textContent = answer.error;
+    if (!answer?.ok) throw new Error(answer?.error || "Fab did not start the claim.");
+    activeRun = true;
   } catch (error) {
     field("status").textContent = error.message;
+  } finally {
+    startPending = false;
+    field("start").disabled = activeRun;
+    paintLimitedButton();
   }
+}
+
+field("filters").addEventListener("submit", (event) => {
+  event.preventDefault();
+  startClaim("search");
 });
 
-// Claims the fab.com/limited-time-free page. Search filters do not apply, only the wait setting.
-field("claimLimited").addEventListener("click", async () => {
-  const filters = readFilters();
-  filters.mode = "limited";
-  if (filters.paceMaxSec < filters.paceMinSec) filters.paceMaxSec = filters.paceMinSec;
-  await chrome.storage.local.set({ [FILTERS_KEY]: filters });
-  try {
-    const answer = await sendToFab({ type: "start", filters, minVersion: EXT_VERSION });
-    if (!answer.ok) field("status").textContent = answer.error;
-  } catch (error) {
-    field("status").textContent = error.message;
-  }
-});
+field("claimLimited").addEventListener("click", () => startClaim("limited"));
 
 // Resume sends the current form values so changed settings take effect.
 field("pauseResume").addEventListener("click", async () => {

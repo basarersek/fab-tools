@@ -1,6 +1,8 @@
 // Watches fab.com/limited-time-free and shows a Chrome notice when new items appear.
 // Runs on its own in the service worker, no fab.com tab needed.
 
+importScripts("limited.js");
+
 const LIMITED_PAGE = "https://www.fab.com/limited-time-free";
 const FILTERS_KEY = "fabClaimFilters";
 const SEEN_KEY = "fabLimitedSeen";
@@ -11,7 +13,6 @@ const BADGE_ALARM = "fab-badge-tick";
 const BADGE_MINUTES = 15;
 const SAFETY_MINUTES = 1440;
 const DROP_GRACE_MS = 5 * 60 * 1000;
-const UID_PATTERN = /\/listings\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/g;
 const DROP_PATTERN = /Until\s+([A-Za-z]+)\s+(\d{1,2})(?:,?\s*(\d{4}))?\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)\s*ET/i;
 const MONTHS = {
   january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
@@ -31,11 +32,97 @@ async function fetchPageHtml() {
 async function collectUids() {
   const html = await fetchPageHtml();
   if (!html) return null;
-  const uids = new Set();
-  let match;
-  while ((match = UID_PATTERN.exec(html)) !== null) uids.add(match[1].toLowerCase());
-  return [...uids];
+  try {
+    return FabLimited.parsePromotion(html).uids;
+  } catch (error) {
+    console.warn("Fab promotion check failed:", error.message);
+    return null;
+  }
 }
+
+const checkoutKey = (tabId) => `fabCheckout:${tabId}`;
+let claimQueue = Promise.resolve();
+
+async function claimLock(message, sender) {
+  if (!sender.tab || !sender.url?.startsWith("https://www.fab.com/") || sender.frameId !== 0) return null;
+  const key = "fabClaimOwner";
+  const owner = (await chrome.storage.session.get(key))[key];
+  if (message.type === "releaseClaim") {
+    if (owner === sender.tab.id) await chrome.storage.session.remove(key);
+    return { ok: true };
+  }
+  if (owner && owner !== sender.tab.id) {
+    const pong = await chrome.tabs.sendMessage(owner, { type: "ping" }).catch(() => null);
+    if (pong?.running) return { error: "A claim is already running in another Fab tab." };
+  }
+  await chrome.storage.session.set({ [key]: sender.tab.id });
+  return { tabId: sender.tab.id };
+}
+
+async function checkoutMessage(message, sender) {
+  if (!sender.tab || !sender.url?.startsWith("https://www.fab.com/")) return null;
+  if (message.type === "openCheckout") {
+    const { uid, title, offerId, namespace, merchantGroup } = message.expected;
+    const url = FabLimited.checkoutUrl(offerId, namespace, merchantGroup);
+    const tab = await chrome.tabs.create({ url: "about:blank", active: false });
+    const expected = { uid, title, offerId, namespace, merchantGroup };
+    await chrome.storage.session.set({ [checkoutKey(tab.id)]: {
+      expected, owner: sender.tab.id, state: "loading", message: "Opening Fab checkout.",
+    } });
+    await chrome.tabs.update(tab.id, { url, active: true });
+    return { tabId: tab.id };
+  }
+  const tabId = message.tabId ?? sender.tab.id;
+  const key = checkoutKey(tabId);
+  const stored = (await chrome.storage.session.get(key))[key];
+  if (!stored) return { state: "closed", message: "Checkout was closed. Start the claim again." };
+  if (message.type === "getCheckout" && tabId === sender.tab.id) return { expected: stored.expected };
+  if (message.type === "checkoutStatus" && tabId === sender.tab.id) {
+    const allowed = ["loading", "guarded", "ready", "unsafe", "confirming", "completed", "action"];
+    if (!allowed.includes(message.state)) return null;
+    await chrome.storage.session.set({ [key]: { ...stored, state: message.state, message: String(message.message || "").slice(0, 200) } });
+    return { ok: true };
+  }
+  if (stored.owner !== sender.tab.id) return null;
+  if (message.type === "readCheckout") {
+    try { await chrome.tabs.get(tabId); } catch { return { state: "closed", message: "Checkout was closed." }; }
+    return { state: stored.state, message: stored.message };
+  }
+  if (message.type === "closeCheckout") {
+    await chrome.tabs.sendMessage(tabId, { type: "cancelCheckout" }).catch(() => {});
+    await chrome.tabs.remove(tabId).catch(() => {});
+    await chrome.storage.session.remove(key);
+    return { ok: true };
+  }
+  return null;
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (["acquireClaim", "releaseClaim"].includes(message?.type)) {
+    claimQueue = claimQueue.then(() => claimLock(message, sender));
+    claimQueue.then(sendResponse).catch((error) => sendResponse({ error: error.message }));
+    claimQueue = claimQueue.catch(() => {});
+    return true;
+  }
+  const types = ["openCheckout", "getCheckout", "checkoutStatus", "readCheckout", "closeCheckout"];
+  if (!types.includes(message?.type)) return;
+  checkoutMessage(message, sender).then(sendResponse).catch((error) => sendResponse({ error: error.message }));
+  return true;
+});
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const stored = await chrome.storage.session.get(null);
+  await chrome.storage.session.remove(checkoutKey(tabId));
+  if (stored.fabClaimOwner !== tabId) return;
+  await chrome.storage.session.remove("fabClaimOwner");
+  for (const [key, value] of Object.entries(stored)) {
+    if (!key.startsWith("fabCheckout:") || value.owner !== tabId) continue;
+    await chrome.tabs.remove(Number(key.split(":")[1])).catch(() => {});
+    await chrome.storage.session.remove(key);
+  }
+  const progress = (await chrome.storage.local.get("fabClaimProgress")).fabClaimProgress;
+  if (progress?.running) await chrome.storage.local.set({ fabClaimProgress: { ...progress, running: false, phase: "stopped" } });
+});
 
 async function fetchTitle(uid) {
   try {

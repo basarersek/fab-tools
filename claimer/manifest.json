@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fab Free Claimer",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Adds free Fab listings to your library, with filters. Unofficial, not affiliated with Epic Games.",
   "permissions": ["storage", "scripting", "alarms", "notifications"],
   "background": { "service_worker": "background.js" },
@@ -23,8 +23,20 @@
   "content_scripts": [
     {
       "matches": ["https://www.fab.com/*"],
-      "js": ["content.js"],
+      "exclude_matches": ["https://www.fab.com/payment/*"],
+      "js": ["limited.js", "content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.fab.com/payment/web/purchase*"],
+      "js": ["limited.js", "checkout-guard.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.fab.com/payment/web/purchase*"],
+      "js": ["checkout.js"],
+      "run_at": "document_start"
     }
   ]
 }

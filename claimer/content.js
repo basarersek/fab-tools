@@ -1,7 +1,7 @@
 // Runs inside fab.com tabs. Does the search and the add to library calls.
 // Requests must come from the fab.com page so the CSRF check passes.
 // Bump with the manifest version so the popup can spot a stale tab.
-const SCRIPT_VERSION = "1.5.0";
+const SCRIPT_VERSION = "1.5.1";
 
 const PROGRESS_KEY = "fabClaimProgress";
 const DONE_KEY = "fabClaimDone";
@@ -29,9 +29,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Already running in this tab." });
       return;
     }
-    runClaim(message.filters);
-    sendResponse({ ok: true });
-    return;
+    running = true;
+    chrome.runtime.sendMessage({ type: "acquireClaim" }).then((answer) => {
+      if (!answer?.tabId) {
+        running = false;
+        sendResponse({ ok: false, error: answer?.error || "Could not start the claim." });
+        return;
+      }
+      runClaim(message.filters, answer.tabId);
+      sendResponse({ ok: true });
+    }).catch((error) => {
+      running = false;
+      sendResponse({ ok: false, error: error.message });
+    });
+    return true;
   }
   if (message.type === "stop") {
     stopRequested = true;
@@ -53,7 +64,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
   if (message.type === "ping") {
-    sendResponse({ ok: true, running });
+    sendResponse({ ok: true, running, revision: 2 });
   }
 });
 
@@ -287,131 +298,75 @@ async function addToLibrary(item, headers) {
   return "failed: too many retries";
 }
 
-const LIMITED_URL = "/limited-time-free";
 const LIMITED_FREE_KEY = "fabLimitedFree";
 
-// The page is server rendered HTML, so its listing links are the catalog.
-async function collectLimitedUids() {
-  const res = await fetch(LIMITED_URL, { credentials: "include" });
-  if (!res.ok) throw new Error(`Limited time free page failed with status ${res.status}`);
-  const html = await res.text();
-  const uids = new Set();
-  const pattern = /\/listings\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/g;
-  let match;
-  while ((match = pattern.exec(html)) !== null) uids.add(match[1].toLowerCase());
-  return [...uids];
+async function claimPromotionItem(uid, done) {
+  const detail = await (await FabLimited.request(`/i/listings/${uid}`)).json();
+  const prices = await (await FabLimited.request(`/i/listings/${uid}/prices-infos`)).json();
+  const license = FabLimited.chooseLicense(detail, prices);
+  const runtime = document.getElementById("js-json-data-sketchfab-runtime");
+  const config = runtime ? JSON.parse(runtime.textContent) : {};
+  const expected = {
+    uid, title: detail.title, offerId: license.offerId,
+    namespace: config.epicFabLiveNamespace, merchantGroup: config.epicFabMerchantGroup,
+  };
+  if (stopRequested) return;
+  const answer = await chrome.runtime.sendMessage({ type: "openCheckout", expected });
+  if (!answer?.tabId) throw new Error(answer?.error || "Fab checkout could not open.");
+  await log(`${detail.title}: opening free ${license.name} checkout.`);
+  let lastMessage = "";
+  const deadline = Date.now() + 10 * 60 * 1000;
+  try {
+    while (!stopRequested && Date.now() < deadline) {
+      if ((await FabLimited.owned([uid])).includes(uid)) {
+        await markDone({ uid }, done, "added");
+        await log(`${detail.title}: ownership verified (${license.name}).`);
+        return;
+      }
+      const state = await chrome.runtime.sendMessage({ type: "readCheckout", tabId: answer.tabId });
+      if (!state || state.error) throw new Error(state?.error || "Checkout stopped responding.");
+      if (["unsafe", "closed"].includes(state.state)) throw new Error(state.message);
+      progress.phase = state.state === "action" ? "action" : "claiming";
+      if (state.message && state.message !== lastMessage) {
+        lastMessage = state.message;
+        await log(lastMessage);
+      }
+      await saveProgress();
+      await sleep(2000);
+    }
+    if (!stopRequested) throw new Error("Checkout timed out. Ownership was not verified. Start again.");
+  } finally {
+    await chrome.runtime.sendMessage({ type: "closeCheckout", tabId: answer.tabId }).catch(() => {});
+  }
 }
 
-// The page links paid extras too, so phase one keeps only truly free listings.
-// Counts and the bar then cover the free ones alone.
-async function claimLimitedList(uids, headers) {
+async function claimLimitedList() {
+  const promotion = await FabLimited.promotion();
   const done = await loadDone();
-  progress.phase = "collecting";
-  await saveProgress();
-  const free = [];
-  let extras = 0;
-  for (const uid of uids) {
-    if (stopRequested) return;
-    if (done.has(uid)) {
-      free.push({ uid, data: null });
-      continue;
-    }
-    const { status, data } = await fetchDetail(uid, headers);
-    if (!data) {
-      if (status === 401 || status === 403) {
-        await log("Not logged in. Log in to fab.com and start again.");
-        return;
-      }
-      progress.failed++;
-      await log(`${uid.slice(0, 8)}: listing page answered ${status}`);
-      continue;
-    }
-    if (detailIsFree(data)) free.push({ uid, data });
-    else {
-      // Paid extras are ignored, unless owned, so owned ones still report truly.
-      try {
-        if (await isOwned(uid, headers)) free.push({ uid, data });
-        else extras++;
-      } catch (error) {
-        if (error.message === "auth") {
-          await log("Not logged in. Log in to fab.com and start again.");
-          return;
-        }
-        progress.failed++;
-        await log(`${data.title || uid.slice(0, 8)}: ownership check failed (${error.message})`);
-      }
-    }
-  }
-  progress.found = free.length;
+  await chrome.storage.local.set({ [LIMITED_FREE_KEY]: promotion.uids });
+  progress.found = promotion.uids.length;
   progress.moreToFind = false;
-  await log(`Limited time free: ${uids.length} links found, ${free.length} free${extras ? `, ${extras} paid extras ignored` : ""}`);
-  try {
-    await chrome.storage.local.set({ [LIMITED_FREE_KEY]: free.map((item) => item.uid) });
-  } catch {
-    // Extension reloaded mid run. The claim still finishes.
-  }
-  let diagnosed = false;
-  for (const item of free) {
+  await log(`Current promotion: ${promotion.uids.length} listings.`);
+  for (const uid of promotion.uids) {
     await waitWhilePaused();
     if (stopRequested) return;
-    progress.phase = "claiming";
-    if (done.has(item.uid)) {
-      progress.skipped++;
-      progress.doneEarlier++;
-      progress.index++;
-      await saveProgress();
-      continue;
-    }
-    let owned = false;
     try {
-      owned = await isOwned(item.uid, headers);
+      if ((await FabLimited.owned([uid])).includes(uid)) {
+        await markDone({ uid }, done, "owned");
+        progress.index++;
+        await saveProgress();
+        continue;
+      }
+      const current = await FabLimited.promotion();
+      if (current.key !== promotion.key) throw new Error("The promotion changed. Start a new limited claim.");
+      await claimPromotionItem(uid, done);
     } catch (error) {
-      if (error.message === "auth") {
-        await log("Not logged in. Log in to fab.com and start again.");
-        return;
-      }
       progress.failed++;
-      progress.index++;
-      await log(`${item.data.title || item.uid.slice(0, 8)}: ownership check failed (${error.message})`);
-      await saveProgress();
-      continue;
-    }
-    if (owned) {
-      await markDone({ uid: item.uid }, done, "owned");
-      await log(`${item.data?.title || item.uid.slice(0, 8)}: already in library`);
-      progress.index++;
-      await saveProgress();
-      continue;
-    }
-    const offer = chooseOffer({ uid: item.uid, title: item.data.title || item.uid.slice(0, 8) }, item.data);
-    if (!offer.offerId) {
-      progress.failed++;
-      await log(`${offer.title}: no free offer found`);
-      if (!diagnosed && offer.debug) {
-        diagnosed = true;
-        await log(`Shape: ${offer.debug}`);
-      }
-      progress.index++;
-      await saveProgress();
-      continue;
-    }
-    const result = await addToLibrary({ uid: item.uid, offerId: offer.offerId }, headers);
-    if (result === "added") {
-      await markDone({ uid: item.uid }, done, "added");
-      await log(`${offer.title}: added (${offer.license})`);
-    } else if (result === "owned") {
-      await markDone({ uid: item.uid }, done, "owned");
-      await log(`${offer.title}: already in library`);
-    } else if (result === "auth") {
-      await log("Not logged in. Log in to fab.com and start again.");
+      await log(`Limited claim stopped: ${error.message}`);
       return;
-    } else {
-      progress.failed++;
-      await log(`${offer.title}: ${result}`);
     }
     progress.index++;
     await saveProgress();
-    await sleep(randomBetween(currentFilters.paceMinSec * 1000, currentFilters.paceMaxSec * 1000));
   }
 }
 
@@ -539,33 +494,36 @@ async function claimInBatches(headers) {
   }
 }
 
-async function runClaim(filters) {
+async function runClaim(filters, runnerTabId) {
   running = true;
   stopRequested = false;
   paused = false;
   currentFilters = filters;
   Object.assign(progress, {
-    running: true, phase: "collecting", found: 0, index: 0, moreToFind: true,
+    running: true, runnerTabId, mode: filters.mode, phase: "collecting", found: 0, index: 0, moreToFind: true,
     added: 0, owned: 0, skipped: 0, doneEarlier: 0, filtered: 0, notFree: 0, repeated: 0, failed: 0, log: [],
   });
 
   try {
-    const headers = await getCsrfHeaders();
-    if (!headers) throw new Error("No CSRF cookie. Log in to fab.com first.");
+    await saveProgress();
     if (currentFilters.mode === "limited") {
       await log("Limited time free: search filters do not apply, only the wait setting.");
-      const uids = await collectLimitedUids();
-      await claimLimitedList(uids, headers);
+      await claimLimitedList();
     } else {
+      const headers = await getCsrfHeaders();
+      if (!headers) throw new Error("No CSRF cookie. Log in to fab.com first.");
       await claimInBatches(headers);
     }
   } catch (error) {
+    progress.failed++;
     await log(`Error: ${error.message}`);
   }
 
-  progress.running = false;
-  progress.phase = stopRequested ? "stopped" : "finished";
+  progress.phase = stopRequested ? "stopped" : progress.failed ? "error" : "finished";
   await log(`${progress.phase}: ${progress.added} added, ${progress.owned} already owned, ${progress.failed} failed.`);
   await log(`Skipped ${progress.skipped}: ${progress.filtered} cut by your filters, ${progress.doneEarlier} claimed in an earlier run, ${progress.notFree} not free, ${progress.repeated} sent twice by Fab.`);
+  await chrome.runtime.sendMessage({ type: "releaseClaim" }).catch(() => {});
   running = false;
+  progress.running = false;
+  await saveProgress();
 }
