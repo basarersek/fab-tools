@@ -67,6 +67,14 @@ Tip: with **Quixel Megascans only** on, leave **Engines** empty. Most Quixel ite
 4. The button stays disabled when all current assets are owned. Reset clears saved progress but does not remove ownership. A new promotion unlocks the button.
 5. Tick **Notify me about new limited time free** for notices about new assets. The popup and toolbar keep their countdowns.
 
+### Version 1.5.2
+
+Normal claims start without a background lock. The popup no longer injects duplicate scripts into old tabs. Reload Fab if the popup asks.
+
+Star filters now go to Fab search, which reduces the listings fetched. Ratings use the current Fab data field. The minimum rating count is still checked locally.
+
+Normal claims succeeded in Chrome. Fab can still return server errors for individual assets. Those failures are retried and are not recorded as claimed.
+
 ### Version 1.5.1
 
 Fixes promotional claims that failed with “Not free.” Uses verified checkout data instead of trying library offers. Keeps normal free search, notifications, countdowns, and the popup layout.

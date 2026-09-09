@@ -169,6 +169,47 @@ describe("submission guard", () => {
 });
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+test("normal Start runs without a background lock and keeps rating filters", async () => {
+  let listener; let finished;
+  const completion = new Promise((resolve) => finished = resolve);
+  const requests = [];
+  const storage = {};
+  const result = (id, rating, count) => ({ uid: id, title: id, averageRating: 0,
+    ratings: { averageRating: rating, total: count }, startingPrice: { price: 0, offerId: "personal" } });
+  const context = vm.createContext({ console, URLSearchParams,
+    setTimeout: (fn) => fn(), document: { cookie: "fab_csrftoken=test" },
+    fetch: async (url, options) => {
+      requests.push({ url, options });
+      let data = {};
+      if (url.includes("/search?")) data = { results: [result("eligible", 5, 5), result("lowRating", 4, 8), result("lowCount", 5, 4)] };
+      if (url.includes("listings-states")) data = { ownership: [] };
+      if (url === "/i/listings/eligible") data = { licenses: [{ slug: "professional", name: "Professional", offerId: "professional", priceTier: { price: 0 } }] };
+      return { ok: true, status: 200, json: async () => data };
+    },
+    chrome: { runtime: { onMessage: { addListener: (fn) => listener = fn },
+      sendMessage: async () => { throw new Error("Background unavailable"); } },
+      storage: { local: { get: async () => storage, set: async (data) => {
+        Object.assign(storage, structuredClone(data));
+        if (data.fabClaimProgress?.phase === "finished" && !data.fabClaimProgress.running) finished();
+      } } } },
+  });
+  vm.runInContext(content, context);
+  const message = { type: "start", minVersion: "1.5.2", runnerTabId: 7,
+    filters: { mode: "search", listingTypes: ["3d-model"], channels: [], minRating: 5, minRatingCount: 5,
+      batchPages: 1, parallelPages: 1, parallelChecks: 1, paceMinSec: 0, paceMaxSec: 0 } };
+  let answer;
+  listener(message, {}, (response) => answer = response);
+  expect(answer.ok).toBe(true);
+  listener(message, {}, (response) => answer = response);
+  expect(answer.error).toBe("Already running in this tab.");
+  await completion;
+  expect(requests[0].url).toBe("/i/listings/search?is_free=1&min_average_rating=5&max_average_rating=5&listing_types=3d-model");
+  const claims = requests.filter((request) => request.options?.method === "POST");
+  expect(claims).toHaveLength(1);
+  expect(JSON.parse(claims[0].options.body).offer_id).toBe("professional");
+  expect(storage.fabClaimProgress).toMatchObject({ added: 1, filtered: 2, failed: 0, runnerTabId: 7 });
+});
+
 function deferred() { let resolve; const promise = new Promise((done) => resolve = done); return { resolve, promise }; }
 
 async function popupHarness() {
@@ -181,7 +222,7 @@ async function popupHarness() {
   const context = vm.createContext({ console, setTimeout, clearTimeout, setInterval, clearInterval,
     document: { getElementById: field, querySelectorAll: () => [], body: { dataset: {} } },
     FabLimited: { promotion: async () => ({ uids: [uid] }), owned: async () => [] },
-    chrome: { runtime: { getManifest: () => ({ version: "1.5.0" }), sendMessage: async () => ({ when: 0 }) },
+    chrome: { runtime: { getManifest: () => ({ version: "1.5.2" }), sendMessage: async () => ({ when: 0 }) },
       scripting: { executeScript: async () => {} },
       tabs: { query: async () => [{ id: 1, url: "https://www.fab.com/" }], sendMessage: async () => ({ ok: true, running: false, revision: 2 }) },
       storage: { local: { get: async () => ({}), set: async () => {} }, onChanged: { addListener() {} } } },
@@ -192,6 +233,18 @@ async function popupHarness() {
 }
 
 describe("limited claim button", () => {
+  test("stale loaded tabs fail promptly without injecting duplicate scripts", async () => {
+    const h = await popupHarness();
+    let injections = 0; let messages = 0;
+    h.context.chrome.tabs.query = async () => [{ id: 1, status: "complete", url: "https://www.fab.com/" }];
+    h.context.chrome.tabs.sendMessage = async () => { messages++; throw new Error("No receiver"); };
+    h.context.chrome.scripting.executeScript = async () => injections++;
+    await h.run("startClaim('search')");
+    expect(messages).toBe(1);
+    expect(injections).toBe(0);
+    expect(h.field("status").textContent).toBe("Reload the Fab tab, then press Start again.");
+    expect(h.field("start").disabled).toBe(false);
+  });
   test("disables synchronously and cannot be unlocked by an older ownership check", async () => {
     const h = await popupHarness();
     const oldCheck = deferred(); const saving = deferred();

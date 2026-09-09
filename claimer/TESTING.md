@@ -30,4 +30,6 @@ The limited claim run changed RPG Crafting and Environment VFX from `acquired: f
 
 The last button changes also prevent a brief enabled state during startup and after completion. Reload the extension and Fab to load these last changes.
 
-The fix ships in Fab Free Claimer 1.5.1. Fab Owned Library remains at 1.4.0. Release archives contain the extension files without a build step.
+Fab Free Claimer 1.5.2 also fixes normal Start and rating filters. Fab Owned Library remains at 1.4.0. Release archives contain the extension files without a build step.
+
+Normal claims added 15 assets in Chrome. Atmospheric Skybox returned HTTP 500; its server error remains unresolved. Start checks cover an unavailable background and stale tabs without duplicate injection. Rating checks cover five stars with at least five ratings using the current Fab response shape.

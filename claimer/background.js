@@ -41,23 +41,6 @@ async function collectUids() {
 }
 
 const checkoutKey = (tabId) => `fabCheckout:${tabId}`;
-let claimQueue = Promise.resolve();
-
-async function claimLock(message, sender) {
-  if (!sender.tab || !sender.url?.startsWith("https://www.fab.com/") || sender.frameId !== 0) return null;
-  const key = "fabClaimOwner";
-  const owner = (await chrome.storage.session.get(key))[key];
-  if (message.type === "releaseClaim") {
-    if (owner === sender.tab.id) await chrome.storage.session.remove(key);
-    return { ok: true };
-  }
-  if (owner && owner !== sender.tab.id) {
-    const pong = await chrome.tabs.sendMessage(owner, { type: "ping" }).catch(() => null);
-    if (pong?.running) return { error: "A claim is already running in another Fab tab." };
-  }
-  await chrome.storage.session.set({ [key]: sender.tab.id });
-  return { tabId: sender.tab.id };
-}
 
 async function checkoutMessage(message, sender) {
   if (!sender.tab || !sender.url?.startsWith("https://www.fab.com/")) return null;
@@ -98,12 +81,6 @@ async function checkoutMessage(message, sender) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (["acquireClaim", "releaseClaim"].includes(message?.type)) {
-    claimQueue = claimQueue.then(() => claimLock(message, sender));
-    claimQueue.then(sendResponse).catch((error) => sendResponse({ error: error.message }));
-    claimQueue = claimQueue.catch(() => {});
-    return true;
-  }
   const types = ["openCheckout", "getCheckout", "checkoutStatus", "readCheckout", "closeCheckout"];
   if (!types.includes(message?.type)) return;
   checkoutMessage(message, sender).then(sendResponse).catch((error) => sendResponse({ error: error.message }));
@@ -113,15 +90,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onRemoved.addListener(async (tabId) => {
   const stored = await chrome.storage.session.get(null);
   await chrome.storage.session.remove(checkoutKey(tabId));
-  if (stored.fabClaimOwner !== tabId) return;
-  await chrome.storage.session.remove("fabClaimOwner");
   for (const [key, value] of Object.entries(stored)) {
     if (!key.startsWith("fabCheckout:") || value.owner !== tabId) continue;
     await chrome.tabs.remove(Number(key.split(":")[1])).catch(() => {});
     await chrome.storage.session.remove(key);
   }
   const progress = (await chrome.storage.local.get("fabClaimProgress")).fabClaimProgress;
-  if (progress?.running) await chrome.storage.local.set({ fabClaimProgress: { ...progress, running: false, phase: "stopped" } });
+  if (progress?.running && progress.runnerTabId === tabId) {
+    await chrome.storage.local.set({ fabClaimProgress: { ...progress, running: false, phase: "stopped" } });
+  }
 });
 
 async function fetchTitle(uid) {

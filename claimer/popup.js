@@ -148,16 +148,7 @@ async function getFabTab(create = true) {
   return chrome.tabs.create({ url: FAB_URL, active: false });
 }
 
-// A second copy of content.js fails to load, so injecting twice is safe.
-async function injectContentScript(tabId) {
-  try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["limited.js", "content.js"] });
-  } catch {
-    // Already loaded, or the tab is still loading. The retry loop handles it.
-  }
-}
-
-// No answer means a fresh tab, or a tab left over from before an extension reload.
+// The manifest loads scripts. Only a loading tab needs time before it can answer.
 async function sendToFab(message, create = true) {
   const tab = await getFabTab(create);
   if (!tab) throw new Error("No fab.com tab open yet.");
@@ -167,9 +158,11 @@ async function sendToFab(message, create = true) {
         const pong = await chrome.tabs.sendMessage(tab.id, { type: "ping" });
         if (pong.revision !== 2) return { ok: false, error: "Reload the Fab tab after reloading the extension." };
       }
-      return await chrome.tabs.sendMessage(tab.id, message);
+      return await chrome.tabs.sendMessage(tab.id, { ...message, runnerTabId: tab.id });
     } catch {
-      await injectContentScript(tab.id);
+      if (!create || tab.status === "complete") {
+        throw new Error("Reload the Fab tab, then press Start again.");
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }

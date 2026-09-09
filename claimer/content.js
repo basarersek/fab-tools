@@ -1,7 +1,7 @@
 // Runs inside fab.com tabs. Does the search and the add to library calls.
 // Requests must come from the fab.com page so the CSRF check passes.
 // Bump with the manifest version so the popup can spot a stale tab.
-const SCRIPT_VERSION = "1.5.1";
+const SCRIPT_VERSION = "1.5.2";
 
 const PROGRESS_KEY = "fabClaimProgress";
 const DONE_KEY = "fabClaimDone";
@@ -17,7 +17,7 @@ let recollectRequested = false;
 let running = false;
 let currentFilters = null;
 
-const searchFilterKeys = ["query", "listingTypes", "channels", "quixelOnly"];
+const searchFilterKeys = ["query", "listingTypes", "channels", "quixelOnly", "minRating"];
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "start") {
@@ -29,20 +29,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Already running in this tab." });
       return;
     }
-    running = true;
-    chrome.runtime.sendMessage({ type: "acquireClaim" }).then((answer) => {
-      if (!answer?.tabId) {
-        running = false;
-        sendResponse({ ok: false, error: answer?.error || "Could not start the claim." });
-        return;
-      }
-      runClaim(message.filters, answer.tabId);
-      sendResponse({ ok: true });
-    }).catch((error) => {
-      running = false;
-      sendResponse({ ok: false, error: error.message });
-    });
-    return true;
+    runClaim(message.filters, message.runnerTabId);
+    sendResponse({ ok: true });
+    return;
   }
   if (message.type === "stop") {
     stopRequested = true;
@@ -140,6 +129,10 @@ async function getCsrfHeaders() {
 
 function buildSearchUrl(filters) {
   const params = new URLSearchParams({ is_free: "1" });
+  if (filters.minRating > 0) {
+    params.set("min_average_rating", filters.minRating);
+    params.set("max_average_rating", "5");
+  }
   if (filters.query) params.set("q", filters.query);
   if (filters.quixelOnly) params.set("seller", "Quixel Megascans");
   for (const type of filters.listingTypes) params.append("listing_types", type);
@@ -160,7 +153,7 @@ function toItem(result) {
     title: result.title,
     offerId: result.startingPrice?.offerId,
     price: result.startingPrice?.price,
-    rating: result.averageRating || 0,
+    rating: result.ratings?.averageRating ?? result.averageRating ?? 0,
     ratingCount: result.ratings?.total || 0,
     isMature: result.isMature,
   };
@@ -522,7 +515,6 @@ async function runClaim(filters, runnerTabId) {
   progress.phase = stopRequested ? "stopped" : progress.failed ? "error" : "finished";
   await log(`${progress.phase}: ${progress.added} added, ${progress.owned} already owned, ${progress.failed} failed.`);
   await log(`Skipped ${progress.skipped}: ${progress.filtered} cut by your filters, ${progress.doneEarlier} claimed in an earlier run, ${progress.notFree} not free, ${progress.repeated} sent twice by Fab.`);
-  await chrome.runtime.sendMessage({ type: "releaseClaim" }).catch(() => {});
   running = false;
   progress.running = false;
   await saveProgress();
